@@ -64,6 +64,9 @@ interface SequenceDiagramPayload {
   summary?: string;           // markdown — appears in the left-edge panel until an event is picked
   events: FileCitySequenceEventDef[];
   edges: SequenceEdge[];
+  layoutOptions?: {
+    laneOrder?: string[];     // explicit left-to-right swimlane order; see "Lane ordering" below
+  };
 }
 ```
 
@@ -139,6 +142,7 @@ The route rejects payloads that violate these — pre-check before posting:
 - Every `edge.fromEvent` and `edge.toEvent` exists in `events`.
 - Every event with `snippet` also has `sourcePath`.
 - For `kind: 'slice'` (or `kind` omitted): `startLine`/`endLine` are positive integers with `endLine >= startLine`; `focusLine` (when present) is a positive integer; `contextLines` (when present) is non-negative.
+- If `layoutOptions` is set it must be an object; `layoutOptions.laneOrder`, if set, must be an array of strings (unknown entries are tolerated by the renderer).
 - Body must stay under 10MB.
 
 If `sourcePath` doesn't resolve to a building, the diagram still renders — the highlight is just skipped. Don't treat that as an error.
@@ -147,6 +151,26 @@ If `sourcePath` doesn't resolve to a building, the diagram still renders — the
 
 - All `sourcePath` values are **repo-relative** (e.g. `auth-server/src/routes/workos.ts`), not absolute, not prefixed with the repo name.
 - `repositoryPath` is absolute and identifies which File City panel should receive the broadcast. If you omit it, every open panel reacts. Always set it.
+
+## Lane ordering
+
+The diagram resolves each event to a swimlane by reading its dotted `name` (`auth.workos.callback.received` → lane `auth`, drilled deeper if the renderer's `openedNamespaces` matches). Left-to-right lane order is controlled two ways:
+
+- **Default — first-event order.** The lane whose first event appears earliest in your `events` array becomes leftmost. For most flows this is enough: order events the way the user should read them and the lanes fall out naturally.
+- **Explicit — `layoutOptions.laneOrder`.** Pass an array of resolved namespaces left-to-right. Listed lanes are placed first in the given order; any unlisted lanes (including ones that materialize after a drill-down) fall back to first-event order behind them. Unknown entries are ignored, so it is safe to list namespaces that may not be present in every dataset.
+
+```json
+{
+  "title": "WorkOS callback flow",
+  "events": [...],
+  "edges": [...],
+  "layoutOptions": {
+    "laneOrder": ["client", "auth", "workos", "database"]
+  }
+}
+```
+
+Use explicit `laneOrder` when the temporal/causal order of events doesn't match the spatial layout you want — e.g. you want `client` always leftmost regardless of which event happens first, or you're rendering a stable reference flow where layout shouldn't drift as you reorder events.
 
 ## Naming conventions
 
