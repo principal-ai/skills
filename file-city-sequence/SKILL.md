@@ -59,6 +59,7 @@ Mix freely: a 12-event flow might have 8 events with snippets and 4 conceptual o
 
 ```ts
 interface SequenceDiagramPayload {
+  id?: string;                // stable id; assigned server-side when omitted. Re-POSTing with the same id updates in place. See "Persistence and library".
   title?: string;             // shown in the bottom drawer header
   repositoryPath?: string;    // pass this — let the agent fill in via `git rev-parse --show-toplevel`
   summary?: string;           // markdown — appears in the left-edge panel until an event is picked
@@ -67,6 +68,7 @@ interface SequenceDiagramPayload {
   layoutOptions?: {
     laneOrder?: string[];     // explicit left-to-right swimlane order; see "Lane ordering" below
   };
+  // notes?: SequenceNote[]   // renderer-only — stripped from HTTP POSTs. See "User notes".
 }
 ```
 
@@ -123,26 +125,66 @@ curl -s -X POST http://localhost:3044/api/file-city/sequence \
   -d @payload.json
 ```
 
-Successful response: `{"success":true,"broadcastTo":<n>}`. If `broadcastTo` is `0`, no window received it — usually means the app isn't running or no renderer is listening yet.
+Successful response:
+
+```json
+{ "success": true, "id": "<assigned-or-echoed-id>", "broadcastTo": 1, "evictedIds": [], "windowOpened": "created" }
+```
+
+- `id` — the stable id of the persisted payload. Capture this if you intend to update the same diagram later (re-POST with the same `id` and the entry is replaced in place; existing `notes` on disk are preserved).
+- `broadcastTo` — how many renderer windows received the payload. `0` means no panel is listening yet; usually fine because the route may have just opened a window (see `windowOpened`) and the renderer rehydrates via `getCurrent` on mount.
+- `evictedIds` — ids dropped by the library's retention policy when this push exceeded the cap. Surface them to the user only if relevant.
+- `windowOpened` — `'focused'` (existing dev-workspace window for the repo brought to front), `'created'` (new window opened for it), or `'none'` (no `repositoryPath`, repo not registered in Alexandria, or `activate: false` was passed).
+
+Optional body fields:
+
+- `activate` — defaults to `true`. Pass `false` to persist the payload without broadcasting it or opening a window — useful when prepping a library entry the user will activate later from the sidebar.
 
 Write the payload to a temp file rather than inlining a large JSON blob into the curl command.
 
 ### 6. Tell the user what to do
 
-After posting, tell the user concisely:
-1. Open the File City panel for `<repositoryPath>` if it isn't open.
-2. Click events in the bottom drawer to step through the flow. Events with `sourcePath` highlight the matching building in cyan, slide in a Pierre snippet drawer on the right, and draw a leader line. Events without `sourcePath` just show their description in the left panel.
-3. To clear: `curl -X DELETE 'http://localhost:3044/api/file-city/sequence?repositoryPath=<path>'` or close the drawer.
+The dev-workspace window opens itself for registered repos, so guidance is short:
+
+1. If `windowOpened` was `'created'` or `'focused'`, the File City panel is already in front. If it was `'none'`, the repo isn't registered in Alexandria yet — tell the user to add it, then activate from the sidebar.
+2. Click an event to step through. Selected event: matching building paints cyan; non-event buildings dim to grey so the involved files stand out; a leader line connects the building to a Pierre snippet drawer on the right; the description shows in the left markdown overlay.
+3. Navigation lives in the **left** overlay (Start → prev/next/position bar). The **right** side, before any event is selected, lists each event-with-source in order so the user can scan files and jump to a step.
+4. To clear without deleting the saved entry: `curl -X DELETE 'http://localhost:3044/api/file-city/sequence?repositoryPath=<path>'` or close the drawer. To delete the saved entry: `DELETE /api/file-city/sequence/:id` (see "Persistence and library").
+
+## Persistence and library
+
+Every accepted POST is persisted to disk under `userData/.../sequence-diagrams`, keyed by `id`. A sidebar "Diagrams" panel in the dev-workspace lists what's saved. The HTTP surface mirrors what the panel does:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/file-city/sequence` | Create or update (when `id` matches an existing entry). Activates and opens the window unless `activate: false`. Strips any `notes` from the body. |
+| `GET` | `/api/file-city/sequence/library?repositoryPath=<abs>` | List saved entries for the given repo (plus repo-agnostic ones); `repositoryPath` optional — omitted returns every entry. Returns `{ entries, activeId }`. |
+| `GET` | `/api/file-city/sequence/:id` | Load a saved payload by id. Returns the payload **with `notes` inline** — use this when an agent needs to read user-authored context. |
+| `POST` | `/api/file-city/sequence/activate` | Body `{ "id": "<id>" }`. Mark the saved entry active for its repo and broadcast it. |
+| `DELETE` | `/api/file-city/sequence/:id` | Permanently delete the saved entry. If it was active, fires `PAYLOAD_CLEARED` for its repo. |
+| `GET` | `/api/file-city/sequence?repositoryPath=<abs>` | Read the currently-active payload for the repo (or `?repositoryPath=` omitted to get all active payloads). |
+| `DELETE` | `/api/file-city/sequence?repositoryPath=<abs>` | Clear the active payload for the repo without deleting the saved entry. |
+
+When updating an existing flow, prefer re-POSTing with the same `id` over deleting and re-creating — `notes` already on the entry are preserved across the update.
+
+## User notes
+
+`SequenceDiagramPayload.notes` carries user-authored snippet annotations and markdown comments anchored to events. They are **renderer-authored only**:
+
+- HTTP `POST` bodies have `notes` stripped during validation. Don't try to push notes from a script — they won't land. (Notes are created via the renderer's note composers and persisted through IPC.)
+- `GET /api/file-city/sequence/:id` returns notes inline. When summarizing or diffing a flow, read this endpoint to pick up the user's commentary.
+- Re-POSTing a payload by `id` keeps existing notes; ids and content are preserved across updates.
 
 ## Validation rules to obey
 
 The route rejects payloads that violate these — pre-check before posting:
 
-- `events` is a non-empty array; each event has `id` and `name`.
+- `events` is a non-empty array; each event has `id` and `name`; event ids are unique within the payload.
 - Every `edge.fromEvent` and `edge.toEvent` exists in `events`.
 - Every event with `snippet` also has `sourcePath`.
-- For `kind: 'slice'` (or `kind` omitted): `startLine`/`endLine` are positive integers with `endLine >= startLine`; `focusLine` (when present) is a positive integer; `contextLines` (when present) is non-negative.
+- For `kind: 'slice'` (or `kind` omitted): `startLine`/`endLine` are positive integers with `endLine >= startLine`; `focusLine` (when present) is a positive integer; `contextLines` (when present) is non-negative. (`kind: 'diff'` is also accepted by the route but belongs to the `file-city-review` skill.)
 - If `layoutOptions` is set it must be an object; `layoutOptions.laneOrder`, if set, must be an array of strings (unknown entries are tolerated by the renderer).
+- If `id` is set it must be a non-empty string.
 - Body must stay under 10MB.
 
 If `sourcePath` doesn't resolve to a building, the diagram still renders — the highlight is just skipped. Don't treat that as an error.
@@ -226,6 +268,9 @@ If the user wants a conceptual flow ("user clicks 'export', browser downloads fi
 | `broadcastTo: 0` | No renderer is listening. App may be starting up or no window is open. |
 | Diagram renders, no highlights | `sourcePath` values don't match any building. Check they're repo-relative and the panel is open on the right repo. |
 | Snippet shows wrong lines | `startLine`/`endLine` were 0-based by mistake — they're 1-based, inclusive. |
+| `windowOpened: 'none'` even though `repositoryPath` was set | Repo isn't registered in Alexandria. Auto-open only works for known repos; tell the user to add it from the launcher. |
+| Notes posted via curl don't appear | Expected — the route strips `notes` on POST. Use the renderer's note composer or the IPC API. |
+| Re-POST creates a duplicate library entry | You didn't pass `id`. Without it the server assigns a fresh id; capture the `id` from the first response and pass it on subsequent updates. |
 
 ## Reference
 

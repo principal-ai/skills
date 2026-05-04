@@ -81,6 +81,7 @@ When in doubt, pass both — it makes the payload self-contained and removes any
 
 ```ts
 interface SequenceDiagramPayload {
+  id?: string;                // stable id; assigned server-side when omitted. Re-POSTing with the same id updates in place. See "Persistence and library".
   title?: string;             // shown in the bottom drawer header
   repositoryPath?: string;    // pass this — let the agent fill in via `git rev-parse --show-toplevel`
   summary?: string;           // markdown — appears in the left-edge panel until an event is picked
@@ -89,6 +90,7 @@ interface SequenceDiagramPayload {
   layoutOptions?: {
     laneOrder?: string[];     // explicit left-to-right swimlane order; see "Lane ordering" below
   };
+  // notes?: SequenceNote[]   // renderer-only — stripped from HTTP POSTs. See "User notes".
 }
 ```
 
@@ -146,26 +148,73 @@ curl -s -X POST http://localhost:3044/api/file-city/sequence \
   -d @payload.json
 ```
 
-Successful response: `{"success":true,"broadcastTo":<n>}`. If `broadcastTo` is `0`, no window received it — usually means the app isn't running or no renderer is listening yet.
+Successful response:
+
+```json
+{ "success": true, "id": "<assigned-or-echoed-id>", "broadcastTo": 1, "evictedIds": [], "windowOpened": "created" }
+```
+
+- `id` — capture this if the user might iterate on the same review (re-POST with the same `id` to update in place; existing notes on disk are preserved).
+- `broadcastTo` — renderer windows that received it. `0` is benign right after the route opens a fresh window — the renderer rehydrates via `getCurrent` on mount.
+- `evictedIds` — entries dropped by the library's retention cap. Surface only if relevant.
+- `windowOpened` — `'focused'` (existing dev-workspace window for the repo brought to front), `'created'` (new window opened), `'none'` (no `repositoryPath`, repo not registered in Alexandria, or `activate: false` was passed).
+
+Optional body fields:
+
+- `activate` — defaults to `true`. Pass `false` to persist without broadcasting/opening a window — useful when staging a review the user will activate from the sidebar later.
 
 Write the payload to a temp file rather than inlining a large JSON blob into the curl command — the bridge accepts up to a 10MB body but argv has its own limits.
 
 ### 7. Tell the user what to do
 
-After posting, tell the user concisely:
-1. Open the File City panel for `<repositoryPath>` if it isn't open.
-2. Click events in the bottom drawer to step through. Each click highlights the matching building in cyan, slides in a Pierre diff drawer on the right, draws a leader line, and shows the event description on the left.
-3. To clear: `curl -X DELETE 'http://localhost:3044/api/file-city/sequence?repositoryPath=<path>'` or just hit close in the drawer.
+The dev-workspace window opens itself for registered repos, so guidance is short:
+
+1. If `windowOpened` was `'created'` or `'focused'`, the File City panel is already in front. If it was `'none'`, the repo isn't registered in Alexandria — tell the user to add it, then activate the saved entry from the sidebar.
+2. Click an event to step through. Selected event: matching building paints cyan; non-event buildings dim grey so the touched files stand out; a leader line connects the building to a Pierre diff drawer on the right; the description shows in the left markdown overlay.
+3. Navigation lives in the **left** overlay (Start → prev/next/position bar). The **right** side, before any event is selected, lists each event-with-source in order so the user can scan the changed files and jump to a step.
+4. To clear without deleting the saved review: `curl -X DELETE 'http://localhost:3044/api/file-city/sequence?repositoryPath=<path>'` or close the drawer. To delete the saved review: `DELETE /api/file-city/sequence/:id` (see "Persistence and library").
+
+## Persistence and library
+
+Every accepted POST is persisted to disk, keyed by `id`, and surfaces in the dev-workspace "Diagrams" sidebar. The HTTP surface mirrors what the panel does:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/file-city/sequence` | Create or update (when `id` matches). Activates and opens a window unless `activate: false`. Strips `notes` from the body. |
+| `GET` | `/api/file-city/sequence/library?repositoryPath=<abs>` | List saved entries for the repo (plus repo-agnostic ones). Returns `{ entries, activeId }`. |
+| `GET` | `/api/file-city/sequence/:id` | Load a saved payload by id. **Returns `notes` inline** — read this when an agent needs the user's review commentary. |
+| `POST` | `/api/file-city/sequence/activate` | Body `{ "id": "<id>" }`. Mark the saved entry active and broadcast. |
+| `DELETE` | `/api/file-city/sequence/:id` | Permanently delete the saved entry. |
+| `GET` | `/api/file-city/sequence?repositoryPath=<abs>` | Read the currently-active payload for the repo. |
+| `DELETE` | `/api/file-city/sequence?repositoryPath=<abs>` | Clear the active payload without deleting the saved entry. |
+
+When the user wants to revise a review, prefer re-POSTing with the same `id` over delete-and-recreate — `notes` already on the entry are preserved.
+
+## User notes
+
+`SequenceDiagramPayload.notes` carries user-authored snippet annotations and markdown comments anchored to events on a review. They are **renderer-authored only**:
+
+- HTTP `POST` bodies have `notes` stripped. Don't try to push notes from a script.
+- `GET /api/file-city/sequence/:id` returns notes inline. If a teammate has annotated the review you saved, read this endpoint to pick up their comments.
+- Re-POSTing a payload by `id` keeps existing notes intact.
+
+## Sharing a review to web-ade
+
+The dev-workspace sidebar can publish a saved review to web-ade so other contributors with GitHub read access to the same repo can pull it. This is a renderer-driven feature (Share button + "Shared with this repo" rows) — there is no HTTP entry point. Worth knowing because:
+
+- Sharing **bakes** every diff snippet's `newContents` from the working tree before uploading. If you authored the review with `newContents` omitted (relying on the renderer reading disk), the bake step still walks `sourcePath` for each event. If a path no longer exists, the share fails with `MISSING_FILES_NEEDS_CONFIRM` until the user retries with "allow missing".
+- The bake cap is 10MB on web-ade's side. Tight `startLine`/`endLine` windows keep shared reviews under that.
 
 ## Validation rules to obey
 
 The route rejects payloads that violate these — pre-check before posting:
 
-- `events` is a non-empty array; each event has `id` and `name`.
+- `events` is a non-empty array; each event has `id` and `name`; event ids are unique within the payload.
 - Every `edge.fromEvent` and `edge.toEvent` exists in `events`.
 - Every event with `snippet` also has `sourcePath`.
 - For `kind: 'diff'`: `oldContents` is a non-empty string; if `newContents` is provided it's a string; `startLine`/`endLine` (when present) are positive integers with `endLine >= startLine`; `diffStyle` (when present) is `'unified'` or `'split'`.
 - If `layoutOptions` is set it must be an object; `layoutOptions.laneOrder`, if set, must be an array of strings (unknown entries are tolerated by the renderer).
+- If `id` is set it must be a non-empty string.
 - Body must stay under 10MB.
 
 If `sourcePath` doesn't resolve to a building in the city, the diagram still renders — the highlight is just skipped. Don't treat that as an error.
@@ -241,6 +290,10 @@ Reviews that read well share these traits:
 | `broadcastTo: 0` | No renderer is listening. App may be starting up or no window is open. |
 | Diagram renders, no highlights | `sourcePath` values don't match any building. Check they're repo-relative and the panel is open on the right repo. |
 | Diff shows but looks wrong | `startLine`/`endLine` window is approximate when lines are added or removed. Pre-slice both sides into matching windows and drop the window props for exact correspondence. |
+| `windowOpened: 'none'` even though `repositoryPath` was set | Repo isn't registered in Alexandria. Auto-open only works for known repos; ask the user to add it from the launcher. |
+| Notes posted via curl don't appear | Expected — the route strips `notes` on POST. Notes can only be authored from the renderer. |
+| Re-POST creates a duplicate library entry | You didn't pass `id`. Capture `id` from the first response and pass it on subsequent updates. |
+| Share fails with `MISSING_FILES_NEEDS_CONFIRM` | Bake step found a `sourcePath` that no longer exists on disk. User must retry with "allow missing", or you should re-author with `newContents` baked in. |
 
 ## Reference
 
