@@ -127,7 +127,7 @@ Field guidance — marker:
 - `id` — short, stable, unique. Referenced by edges, notes, and view blocks. Lowercase-kebab reads well (`callback-received`, `token-exchange`).
 - `label` — short human title for the snippet drawer header. When omitted, the renderer falls back to the sequence view's `name`.
 - `sourcePath` — **repo-relative** when set. Required if `snippet` is set; optional otherwise.
-- `description` — markdown. Surfaced in the left-edge floating panel when the marker is selected. This is where the *why* and the surrounding context live. 2–6 sentences.
+- `description` — markdown. Surfaced in the left-edge floating panel when the marker is selected. This is where the *why* and the surrounding context live. 2–6 sentences. **Factual, not editorial** — see the quality bar's "No editorializing" rule before writing.
 - `snippet.kind` — `'slice'` for runtime traces (this skill). Always set it explicitly.
 - `snippet.startLine`/`endLine` — 1-based, inclusive. Keep windows tight; long snippets bury the focal line.
 - `snippet.focusLine` — the single line you most want the reader to look at. Defaults to `startLine`.
@@ -152,7 +152,21 @@ Use `label` to convey edge semantics: `"then"`, `"on success"`, `"on 401"`, `"as
 
 ### 4. Write the summary
 
-Set `payload.summary` to a markdown overview of the flow — what triggers it, what completes it, the headline gotchas. This is the first thing the user sees in the left panel before picking a marker. 4–10 lines.
+Set `payload.summary` to a markdown overview of the flow — what triggers it, what completes it, the headline gotchas. This is the first thing the user sees in the left panel before picking a marker. **3 sentences max.** If you can't fit the whole flow in three sentences, the surplus belongs in marker descriptions, not in the summary.
+
+**Formatting rules** (the summary renders inside a narrow floating overlay; structural markdown breaks the layout):
+
+- **Paragraph breaks between sentences.** A 3-sentence wall is still a wall in a narrow overlay; three short blocks are scannable. Put each sentence (or each logical beat) on its own paragraph separated by a blank line (`\n\n` in JSON). Don't use single trailing newlines (`\n`) — markdown collapses them into spaces and you get the wall back.
+- **Lede labels are encouraged.** Start each paragraph with a 1–3-word bolded anchor that ends in a period: `**Default.**`, `**On click.**`, `**Clean swap.**`, `**Steady state.**`, `**Trigger.**`, `**Surprise.**`, etc. These act as visual scan anchors and label what each paragraph is *about*. Lede labels are a **separate budget** from the emphasis-bold rule below — they don't count against it. Skip them when prose alone already telegraphs the structure (rare for a 3-sentence summary).
+- **Inline-code every real identifier.** Component names, state variables, props, file paths, function names — wrap in `` ` ` ``. Anchors the prose to grep-able symbols and visually separates names from prose. *"the card's `highlightLayers` memo"* beats *"the card's highlightLayers memo"*.
+- **Emphasis bold sparingly — at most one term per summary**, reserved for the load-bearing concept the reader should walk away with (e.g. `**union**` when contrasting the default state with the narrowed one). Lede labels don't count toward this budget; this rule is about the *body* of a paragraph. More than one emphasis bold dilutes the emphasis to none.
+- **No headers, no lists, no links, no code blocks.** A summary that wants any of these has broken the 3-sentence cap. Lists in particular signal that you're enumerating instead of summarizing — push them into marker descriptions.
+- **Active voice, present tense.** *"The card paints the layer"*, not *"the layer is painted by the card"* and not *"we made the card paint the layer"*. The summary describes how the code works **now**, not how it was built or investigated.
+- **Name real identifiers, not paraphrases.** Write `selectedTrailId`, not *"the current selection"*. Generic nouns (*"the state"*, *"the handler"*, *"the helper"*) are a sign the prose is too abstract to be useful — a reader can't grep for *"the state"*.
+- **No first person, no hedging.** Drop *"we"*, *"I"*, *"basically"*, *"essentially"*, *"roughly"*, *"seems to"*, *"more or less"*. The summary states facts, not impressions.
+- **Semicolons and em-dashes are fine** for compressing two related clauses into one sentence — better than padding the 3-sentence budget with a short connective sentence.
+
+A useful default shape (not a hard rule): sentence 1 = the **default state** / what the thing does at rest, sentence 2 = the **trigger and the path** it travels when something changes, sentence 3 = the **invariant or detail** that would surprise a reader who stopped after sentence 2.
 
 ### 5. POST it
 
@@ -187,13 +201,11 @@ Successful response:
 ```
 
 - `id` — echoed back. Re-POSTing with the same `id` updates in place; `notes` already on disk are preserved.
-- `broadcastTo` — how many renderer windows received the payload. `0` is benign right after the route opens a fresh window — the renderer rehydrates via `getCurrent` on mount.
+- `broadcastTo` — how many renderer windows received the payload. `0` is benign right after the route opens a fresh window — the new window picks up the trail from the `?openTrailId=` arg baked into its URL by `openDevWorkspaceWindow`.
 - `evictedIds` — ids dropped by the library's retention policy when this push exceeded the cap. Surface them to the user only if relevant.
-- `windowOpened` — `'focused'` (existing dev-workspace window for the repo brought to front), `'created'` (new window opened for it), `'none'` (no `repositoryPath`, repo not registered in Alexandria, or `activate: false` was passed).
+- `windowOpened` — `'focused'` (existing dev-workspace window for the repo brought to front), `'created'` (new window opened for it with this trail already wired in via `?openTrailId=`), `'none'` (no `repositoryPath` or the path isn't a git repo and Alexandria couldn't auto-register it).
 
-Optional body fields:
-
-- `activate` — defaults to `true`. Pass `false` to persist the payload without broadcasting it or opening a window — useful when prepping a library entry the user will activate later from the Trails sidebar.
+Every POST broadcasts and opens a window — there's no "persist quietly without showing it" flag. To bake a trail into the library without activating it, POST it once, then close the trail tab; nothing references "active" anywhere.
 
 Write the payload to a temp file rather than inlining a large JSON blob into the curl command.
 
@@ -204,21 +216,19 @@ The dev-workspace window opens itself for registered repos, so guidance is short
 1. If `windowOpened` was `'created'` or `'focused'`, the File City panel is already in front. If it was `'none'`, the repo isn't registered in Alexandria yet — tell the user to add it from the launcher, then activate the saved trail from the Trails sidebar.
 2. Click a marker to step through. Selected marker: matching building paints cyan; non-marker buildings dim to grey so the involved files stand out; a leader line connects the building to a Pierre snippet drawer on the right; the description shows in the left markdown overlay.
 3. Navigation lives in the **left** overlay (Start → prev/next/position bar). The **right** side, before any marker is selected, lists each marker-with-source in order so the user can scan files and jump to a stop.
-4. To clear without deleting the saved entry: `curl -X DELETE 'http://localhost:3044/api/file-city/trail?repositoryPath=<path>'` or close the drawer. To delete the saved entry: `DELETE /api/file-city/trail/:id` (see "Persistence and library").
+4. To close the trail tab in the renderer, just close it — there is no "active" pointer to clear. To delete a saved entry from disk: `DELETE /api/file-city/trail/:id` (see "Persistence and library").
 
 ## Persistence and library
 
-Every accepted POST is persisted to disk under `userData/file-city-trails/<bucket>/<id>.json`, keyed by `id`. A "Trails" panel in the dev-workspace sidebar lists what's saved. The HTTP surface mirrors what the panel does:
+Every accepted POST is persisted to disk under `~/.principal/trails/<bucket>/<id>.json`, keyed by `id`. The host never tracks a "currently-active" trail on disk — which trail a window is showing is per-window state driven by the `?openTrailId=` URL arg at window creation and IPC `PAYLOAD_SET` broadcasts after that. A "Trails" panel in the dev-workspace sidebar lists what's saved. The HTTP surface mirrors what the panel does:
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/file-city/trail` | Create or update (when `id` matches an existing entry). Activates and opens the window unless `activate: false`. Strips any `notes` from the body. |
-| `GET` | `/api/file-city/trail/library?repositoryPath=<abs>` | List saved entries for the given repo (plus repo-agnostic ones); `repositoryPath` optional — omitted returns every entry. Returns `{ entries, activeId }`. |
+| `POST` | `/api/file-city/trail` | Create or update (when `id` matches an existing entry). Persists, broadcasts, and opens/focuses the dev-workspace window with this trail's id baked into its URL so the trail tab auto-opens. Strips any `notes` from the body. |
+| `GET` | `/api/file-city/trail/library?repositoryPath=<abs>` | List saved entries for the given repo (plus repo-agnostic ones); `repositoryPath` optional — omitted returns every entry. Returns `{ entries }`. |
 | `GET` | `/api/file-city/trail/:id` | Load a saved payload by id. Returns the payload **with `notes` inline** — use this when an agent needs to read user-authored context. |
-| `POST` | `/api/file-city/trail/activate` | Body `{ "id": "<id>" }`. Mark the saved entry active for its repo and broadcast it. |
-| `DELETE` | `/api/file-city/trail/:id` | Permanently delete the saved entry. |
-| `GET` | `/api/file-city/trail?repositoryPath=<abs>` | Read the currently-active payload for the repo (or `?repositoryPath=` omitted to get all active payloads). |
-| `DELETE` | `/api/file-city/trail?repositoryPath=<abs>` | Clear the active payload for the repo without deleting the saved entry. |
+| `POST` | `/api/file-city/trail/activate` | Body `{ "id": "<id>" }`. Loads the saved entry, broadcasts `PAYLOAD_SET`, and opens/focuses the dev-workspace window with this trail's id baked in. Same UX as POSTing the trail again, without re-sending the body. |
+| `DELETE` | `/api/file-city/trail/:id` | Permanently delete the saved entry. Windows currently showing this trail clear their tab; saved entries unrelated to the deleted id are unaffected. |
 
 When updating an existing trail, prefer re-POSTing with the same `id` over deleting and re-creating — `notes` already on the entry are preserved across the update.
 
@@ -318,6 +328,7 @@ Trails that read well share these traits:
 - **Stable lanes.** Reusing 3 lanes across 12 markers makes the trail clean; using 12 different lanes makes it confetti.
 - **Snippets land on the right line.** `focusLine` should point at the *call* or *decision* the marker is about, not at the surrounding boilerplate.
 - **Descriptions answer "why this exists" or "what's surprising here".** Surface the cookie that's checked, the retry that's silent, the race that almost bit you.
+- **No editorializing.** Descriptions are factual statements about behavior, not commentary about the trail. Banned phrasings (non-exhaustive): *"The whole feature."*, *"This is where the magic happens."*, *"Everything hinges on this."*, *"Critically important step."*, *"TL;DR: …"*, *"The key insight is …"*, *"Note that …"*, *"Importantly, …"*. If a marker is load-bearing, **demonstrate** it through specific detail (the branch taken, the value checked, the side-effect emitted) — never **tell** the reader it matters. Show the cookie, don't announce that there is a cookie worth showing. State *what* the code does and *why* a reader would care; do not editorialize *that* they should care.
 - **Order matches reading order.** The first marker is where you'd start explaining the flow on a whiteboard.
 
 ## Common shapes
