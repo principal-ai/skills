@@ -1,27 +1,34 @@
 ---
-name: file-city-trail
-description: Visualize a runtime trace, request flow, or architecture sequence inside the running electron-app's File City panel. Build a trail with one marker per step — each marker pinned to a file + line range — then POST it to the local Principal MCP Bridge so clicking a node highlights the matching building in 3D and opens the source slice in a Pierre drawer. Use when the user says "diagram this flow", "show the sequence of X", "trace this request", "visualize how A calls B", "lay a trail through the auth flow", or invokes /file-city-trail. NOT for reviewing PR diffs — use file-city-trail-review for those.
+name: author-investigation-trail
+description: Author an investigation trail — the exploratory version of a flow, request path, callback chain, or architecture sequence — and POST it to the local Principal MCP Bridge so it lands in the running electron-app's File City panel. Investigation trails are the version you lay as you figure something out; they're allowed to carry exploratory titles, a "subject" marker pointing at the answer, and a record of how the answer was found. Use when the user says "investigate this flow", "trace this request", "diagram this sequence", "lay an investigation trail through X", "visualize how A calls B", or invokes /author-investigation-trail. NOT for the durable canonical version — use author-informative-trail (or promote-investigation to fork this trail into one). NOT for PR diff walkthroughs — use file-city-trail-review.
 ---
 
-# File City Trail (trace/flow)
+# Author Investigation Trail
 
-Turn a flow — a request path, a startup sequence, a callback chain, a cross-service handshake — into a clickable, ordered **trail** inside the running electron-app's File City panel. Each marker = one stop on the trail; clicking it highlights the corresponding building in 3D and (optionally) opens a Pierre slice snippet showing the relevant source lines.
+Turn a flow — a request path, a startup sequence, a callback chain, a cross-service handshake — into a clickable, ordered **investigation trail** inside the running electron-app's File City panel. Each marker = one stop on the trail; clicking it highlights the corresponding building in 3D and (optionally) opens a Pierre slice snippet showing the relevant source lines.
 
-This skill covers the **trace/flow** flavor (`snippet.kind: 'slice'` or no snippet). For PR diff walkthroughs, use the sister `file-city-trail-review` skill.
+Investigation trails are the **exploratory** flavor: you lay markers as you trace through the codebase, allowed to wander, allowed to leave dead ends and "let me check…" descriptions, allowed to mark a destination as the **subject**. Once you have your answer, you can fork the investigation into a clean informative trail with `promote-investigation` — the original stays untouched as the record of how the answer was found.
+
+This skill covers the **trace/flow** flavor (`snippet.kind: 'slice'` or no snippet). For PR diff walkthroughs, use the sister `file-city-trail-review` skill. For authoring a fresh canonical/durable trail from scratch (no investigation source to fork), use `author-informative-trail`.
 
 ## When to fire
 
 Fire on phrases like:
 
+- "investigate this flow"
 - "diagram this flow / sequence"
 - "show the sequence of how X works"
 - "trace this request / callback / lifecycle"
 - "visualize how A calls B"
-- "lay a trail through the auth flow"
+- "lay a trail / investigation through the auth flow"
 - "make a trail for this startup sequence"
-- explicit `/file-city-trail` invocation
+- explicit `/author-investigation-trail` invocation
 
-Don't fire when the user wants a review of *changes* — that's `file-city-trail-review`.
+Don't fire when:
+
+- The user wants a review of *changes* — that's `file-city-trail-review`.
+- The user already has an investigation and wants the canonical version — that's `promote-investigation`.
+- The user wants the durable / canonical statement of how something works from scratch (no exploration needed) — that's `author-informative-trail`.
 
 ## Prerequisites
 
@@ -67,13 +74,22 @@ For each step, decide whether it warrants a code snippet:
 
 Mix freely: a 12-marker trail might have 8 markers with snippets and 4 conceptual ones.
 
-### 3. Build the payload
+### 3. Pick the subject marker
+
+Investigation trails are allowed (and encouraged) to mark a single marker as the **subject** — the destination the trail directs the reader's focus toward. The cause, the bug location, the answer to the question that triggered the investigation. Set `kind: 'subject'` on that marker.
+
+If the investigation has no clear destination yet — it's still wandering — leave `kind: 'subject'` off. You can add it later by re-POSTing.
+
+The subject concept is **investigation-only**. When this trail is promoted to informative via `promote-investigation`, the subject marker is stripped (the server enforces this).
+
+### 4. Build the payload
 
 ```ts
 interface TrailPayload {
   id: string;                     // REQUIRED — producer-supplied (e.g. crypto.randomUUID())
   title: string;                  // REQUIRED — shown in the drawer header
   summary?: string;               // markdown — appears in the left-edge panel until a marker is picked
+  purpose?: 'investigation' | 'informative';  // set 'investigation' here
   kind?: string;                  // free-form tag, e.g. 'flow', 'trace', 'lifecycle'
   authoredAt?: { sha: string; ref?: string };  // single-repo provenance shorthand — RECOMMENDED
   repos?: TrailRepo[];            // multi-repo registry; omit for single-repo trails
@@ -103,6 +119,19 @@ A typical marker:
 }
 ```
 
+The marker that answers the investigation's question:
+
+```json
+{
+  "id": "csrf-state-mismatch",
+  "label": "State mismatch rejects the callback",
+  "kind": "subject",
+  "sourcePath": "auth-server/src/routes/workos.ts",
+  "description": "The `state` cookie comparison fails when the cookie was issued under a different SameSite policy. This is the source of the silent redirect-loop seen in #4291.",
+  "snippet": { "kind": "slice", "startLine": 51, "endLine": 58, "focusLine": 53 }
+}
+```
+
 The matching `views[0]` entry pins the marker into a swimlane:
 
 ```json
@@ -127,6 +156,7 @@ Field guidance — marker:
 - `id` — short, stable, unique. Referenced by edges, notes, and view blocks. Lowercase-kebab reads well (`callback-received`, `token-exchange`).
 - `label` — short human title for the snippet drawer header. When omitted, the renderer falls back to the sequence view's `name`.
 - `sourcePath` — **repo-relative** when set. Required if `snippet` is set; optional otherwise.
+- `kind` — `'subject'` marks the investigation's destination. Investigation-only; stripped on promote.
 - `description` — markdown. Surfaced in the left-edge floating panel when the marker is selected. This is where the *why* and the surrounding context live. 2–6 sentences. **Factual, not editorial** — see the quality bar's "No editorializing" rule before writing.
 - `snippet.kind` — `'slice'` for runtime traces (this skill). Always set it explicitly.
 - `snippet.startLine`/`endLine` — 1-based, inclusive. Keep windows tight; long snippets bury the focal line.
@@ -150,9 +180,11 @@ Edges (`views[0].edges[]`) define order. The field names mirror the upstream ren
 
 Use `label` to convey edge semantics: `"then"`, `"on success"`, `"on 401"`, `"async"`. For straightforward sequences a single linear chain is enough. (Yes, the field is `fromEvent`/`toEvent` even though the trail noun is "marker" — this is the upstream renderer's edge type, reused unchanged.)
 
-### 4. Write the summary
+### 5. Write the summary
 
 Set `payload.summary` to a markdown overview of the flow — what triggers it, what completes it, the headline gotchas. This is the first thing the user sees in the left panel before picking a marker. **3 sentences max.** If you can't fit the whole flow in three sentences, the surplus belongs in marker descriptions, not in the summary.
+
+Investigation summaries are allowed to read as a question or hypothesis ("Why does the WorkOS callback silently redirect-loop on Safari?") rather than a statement. When the investigation reaches an answer, the title and summary can be tightened in place, or the trail can be promoted to informative for the canonical statement.
 
 **Formatting rules** (the summary renders inside a narrow floating overlay; structural markdown breaks the layout):
 
@@ -168,7 +200,7 @@ Set `payload.summary` to a markdown overview of the flow — what triggers it, w
 
 A useful default shape (not a hard rule): sentence 1 = the **default state** / what the thing does at rest, sentence 2 = the **trigger and the path** it travels when something changes, sentence 3 = the **invariant or detail** that would surprise a reader who stopped after sentence 2.
 
-### 5. POST it
+### 6. POST it
 
 Send the payload with the producer-machine `repositoryPath` as a top-level field beside it (the host uses it to bucket and open a window — it's not part of the portable payload):
 
@@ -182,14 +214,15 @@ Where `payload.json` looks like:
 
 ```json
 {
-  "id": "auth-workos-callback-flow",
-  "title": "WorkOS callback flow",
+  "id": "auth-workos-callback-investigation",
+  "title": "Why does the WorkOS callback silently redirect-loop on Safari?",
   "summary": "...",
+  "purpose": "investigation",
   "authoredAt": { "sha": "abc1234", "ref": "main" },
   "markers": [...],
   "views": [{ "kind": "sequence", "markers": [...], "edges": [...] }],
-  "createdAt": "2026-05-06T18:00:00.000Z",
-  "updatedAt": "2026-05-06T18:00:00.000Z",
+  "createdAt": "2026-05-13T18:00:00.000Z",
+  "updatedAt": "2026-05-13T18:00:00.000Z",
   "repositoryPath": "/Users/you/code/auth-server"
 }
 ```
@@ -209,7 +242,7 @@ Every POST broadcasts and opens a window — there's no "persist quietly without
 
 Write the payload to a temp file rather than inlining a large JSON blob into the curl command.
 
-### 6. Tell the user what to do
+### 7. Tell the user what to do
 
 The dev-workspace window opens itself for registered repos, so guidance is short:
 
@@ -322,13 +355,14 @@ Stick with one prefix per flow. Avoid generic names like `step1`, `handler`, `do
 
 ## Authoring quality bar
 
-Trails that read well share these traits:
+Investigation trails are allowed to wander — that's the point. But they still read better when they obey these traits:
 
 - **One thing per marker.** If a step contains an `if/else` whose branches diverge, model them as two markers with separate edges.
 - **Stable lanes.** Reusing 3 lanes across 12 markers makes the trail clean; using 12 different lanes makes it confetti.
 - **Snippets land on the right line.** `focusLine` should point at the *call* or *decision* the marker is about, not at the surrounding boilerplate.
 - **Descriptions answer "why this exists" or "what's surprising here".** Surface the cookie that's checked, the retry that's silent, the race that almost bit you.
-- **No editorializing.** Descriptions are factual statements about behavior, not commentary about the trail. Banned phrasings (non-exhaustive): *"The whole feature."*, *"This is where the magic happens."*, *"Everything hinges on this."*, *"Critically important step."*, *"TL;DR: …"*, *"The key insight is …"*, *"Note that …"*, *"Importantly, …"*. If a marker is load-bearing, **demonstrate** it through specific detail (the branch taken, the value checked, the side-effect emitted) — never **tell** the reader it matters. Show the cookie, don't announce that there is a cookie worth showing. State *what* the code does and *why* a reader would care; do not editorialize *that* they should care.
+- **Subject marker (when you have one) is unambiguous.** Exactly one marker carries `kind: 'subject'`. It's the answer the trail points at, not a stop along the way.
+- **No editorializing.** Descriptions are factual statements about behavior, not commentary about the trail. Banned phrasings (non-exhaustive): *"The whole feature."*, *"This is where the magic happens."*, *"Everything hinges on this."*, *"Critically important step."*, *"TL;DR: …"*, *"The key insight is …"*, *"Note that …"*, *"Importantly, …"*. If a marker is load-bearing, **demonstrate** it through specific detail (the branch taken, the value checked, the side-effect emitted) — never **tell** the reader it matters. Show the cookie, don't announce that there is a cookie worth showing. State *what* the code does and *why* a reader would care; do not editorialize *that* they should care. (Investigation trails are allowed *exploratory* language — "let me check…", "first guess was…" — but not editorial flourishes about importance. The two are different rules.)
 - **Order matches reading order.** The first marker is where you'd start explaining the flow on a whiteboard.
 
 ## Common shapes
@@ -392,6 +426,10 @@ Multi-repo trails activate one panel per registered repo when broadcast.
 
 ## Reference
 
+- Sister skill for the canonical / durable version of a trail: `author-informative-trail`
+- Fork this investigation into a clean informative trail with a `derivedFrom` link: `promote-investigation`
 - Sister skill for PR diff walkthroughs: `file-city-trail-review`
+- Sister skill for publishing to web-ade: `publish-trail`
+- Sister skill for local-only authoring (no electron-app required): `local-trails`
 - Schema source: `industry-themed-file-city-panels/src/types/Trail.ts`
 - Design doc: `industry-themed-file-city-panels/docs/TRAIL_DESIGN.md`

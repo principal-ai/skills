@@ -1,13 +1,13 @@
 ---
 name: publish-trail
-description: Build and publish a slice/flow trail to web-ade so it can be shared as a https://app.principal-ade.com/trail/<id> link, without needing the Principal ADE desktop app installed. Use when the user says "publish a trail", "share this flow as a link", "make a shareable trail", "create a trail link", or invokes /publish-trail. Posts via the `principal-ai` CLI using the user's GitHub token (resolved locally from `gh auth token` or git credential helper). NOT for local visualization in the desktop app — use file-city-trail for that. NOT for PR diff walkthroughs — those need a separate diff-aware skill.
+description: Build and publish a slice/flow trail to web-ade so it can be shared as a https://app.principal-ade.com/trail/<id> link, without needing the Principal ADE desktop app installed. Use when the user says "publish a trail", "share this flow as a link", "make a shareable trail", "create a trail link", or invokes /publish-trail. Posts via the `principal-ai` CLI using the user's GitHub token (resolved locally from `gh auth token` or git credential helper). NOT for local visualization in the desktop app — use author-investigation-trail or author-informative-trail for that. NOT for PR diff walkthroughs — those need a separate diff-aware skill.
 ---
 
 # Publish Trail
 
 Build a slice/flow **trail** — markers + sequence view, anchored to file + line ranges — and publish it to web-ade so anyone with GitHub read access to the named repository can view it at `https://app.principal-ade.com/trail/<id>`.
 
-This skill is for the **no-app / share-only** case. It produces the same payload shape as the `file-city-trail` skill, but instead of POSTing to a local Principal MCP Bridge it shells out to the published `principal-ai` CLI, which authenticates with the user's local GitHub token and POSTs to web-ade.
+This skill is for the **no-app / share-only** case. It produces the same payload shape as the `author-investigation-trail` / `author-informative-trail` skills, but instead of POSTing to a local Principal MCP Bridge it shells out to the published `principal-ai` CLI, which authenticates with the user's local GitHub token and POSTs to web-ade.
 
 ## When to fire
 
@@ -21,7 +21,7 @@ Fire on phrases like:
 
 Don't fire when:
 
-- The user wants to *visualize* the flow inside their running desktop app — use `file-city-trail`.
+- The user wants to *visualize* the flow inside their running desktop app — use `author-investigation-trail` (exploratory) or `author-informative-trail` (canonical).
 - The user wants a PR / branch diff walkthrough — that's a sister skill (TODO).
 
 ## Prerequisites
@@ -320,6 +320,6 @@ Ship `repos: [...]` with one entry per repo and set `marker.repo` on every marke
 
 ## Reference
 
-- Sister skill for local visualization in the desktop app: `file-city-trail`
+- Sister skills for local visualization in the desktop app: `author-investigation-trail`, `author-informative-trail`
 - CLI: `@principal-ai/principal-view-cli` — `principal-ai trail publish --help`
 - Web-ade endpoint: `POST https://app.principal-ade.com/api/trails` (gated by GitHub repo read access)

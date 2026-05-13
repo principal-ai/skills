@@ -1,13 +1,13 @@
 ---
 name: file-city-trail-review
-description: Walk a user through a PR or branch diff visually inside the running electron-app's File City panel. Build a trail where each marker is a change region with an inline before/after diff snippet, and POST it to the local Principal MCP Bridge so the changes light up the matching buildings with a leader line to a Pierre diff drawer. Use when the user says "review this PR/branch in File City", "walk me through these changes", "show this diff as a trail", "lay a review trail", or invokes /file-city-trail-review. NOT for runtime traces or architecture diagrams without diffs — use file-city-trail for those.
+description: Walk a user through a PR or branch diff visually inside the running electron-app's File City panel. Build a trail where each marker is a change region with an inline before/after diff snippet, and POST it to the local Principal MCP Bridge so the changes light up the matching buildings with a leader line to a Pierre diff drawer. Use when the user says "review this PR/branch in File City", "walk me through these changes", "show this diff as a trail", "lay a review trail", or invokes /file-city-trail-review. NOT for runtime traces or architecture diagrams without diffs — use author-investigation-trail or author-informative-trail for those.
 ---
 
 # File City Trail Review (PR walkthrough)
 
 Turn a set of changes (a branch, a PR, a working tree) into a clickable, ordered **trail** inside the running electron-app's File City panel. Each marker = one change region; clicking it highlights the corresponding building in 3D and opens a Pierre diff snippet showing old → new for just that region.
 
-This skill covers the **review** flavor (`snippet.kind: 'diff'`). For runtime/trace trails, use the sister `file-city-trail` skill.
+This skill covers the **review** flavor (`snippet.kind: 'diff'`). For runtime/trace trails, use the sister `author-investigation-trail` (exploratory) or `author-informative-trail` (canonical) skills.
 
 ## When to fire
 
@@ -20,7 +20,7 @@ Fire on phrases like:
 - "step through this PR"
 - explicit `/file-city-trail-review` invocation
 
-Don't fire when the user is asking for a generic flow trail with no diff — that's `file-city-trail`.
+Don't fire when the user is asking for a generic flow trail with no diff — that's `author-investigation-trail` (exploratory) or `author-informative-trail` (canonical).
 
 ## Prerequisites
 
@@ -368,6 +368,6 @@ Reviews that read well share these traits:
 
 ## Reference
 
-- Sister skill for non-diff trails: `file-city-trail`
+- Sister skills for non-diff trails: `author-investigation-trail` (exploratory), `author-informative-trail` (canonical)
 - Schema source: `industry-themed-file-city-panels/src/types/Trail.ts`
 - Design doc: `industry-themed-file-city-panels/docs/TRAIL_DESIGN.md`

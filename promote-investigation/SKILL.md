@@ -1,6 +1,6 @@
 ---
 name: promote-investigation
-description: Promote an existing investigation trail to a new informative trail by forking it. Read the source investigation, identify the subject marker (the answer it points at), author a refined informative payload, and POST it to the local Principal MCP Bridge's fork route. The route stamps a derivedFrom link so the new informative trail is associated with the original investigation. Use when the user says "promote this trail", "make this an informative trail", "turn this investigation into a canonical trail", or invokes /promote-investigation. NOT for authoring a trail from scratch — use file-city-trail for that.
+description: Promote an existing investigation trail to a new informative trail by forking it. Read the source investigation, identify the subject marker (the answer it points at), author a refined informative payload, and POST it to the local Principal MCP Bridge's fork route. The route stamps a derivedFrom link so the new informative trail is associated with the original investigation. Use when the user says "promote this trail", "make this an informative trail", "turn this investigation into a canonical trail", or invokes /promote-investigation. NOT for authoring a trail from scratch — use author-informative-trail (canonical from scratch) or author-investigation-trail (exploratory).
 ---
 
 # Promote Investigation
@@ -21,7 +21,7 @@ Fire on phrases like:
 
 Don't fire when:
 
-- The user wants to **author** a trail from scratch — that's `file-city-trail` (or `publish-trail` / `local-trails`).
+- The user wants to **author** a trail from scratch — that's `author-informative-trail` (canonical) or `author-investigation-trail` (exploratory). For publishing or local-only authoring see `publish-trail` / `local-trails`.
 - The user wants to **share** a trail to web-ade — that's the renderer-driven Share flow.
 - The user wants to **mutate** the investigation in place — promotion is fork-only.
 
@@ -65,7 +65,7 @@ Build a new `TrailPayload`:
 
 - `id` — fresh, unique. Generate with `crypto.randomUUID()` or a stable kebab id like `<source-title-slug>-informative`. **Must differ from `sourceId`.**
 - `title` — refined. Investigations often have exploratory titles ("looking into…"); informative trails should read as a statement of what's true ("Titlebar selection opens project-info tab via repository-selected event").
-- `summary` — refined. Concise statement of the durable insight, not the path to it. **3 sentences max** (overflow belongs in marker descriptions, not the summary). Drop the "I was confused about…" phrasing. Follow `file-city-trail`'s "Formatting rules" section in full: paragraph breaks between sentences, optional bolded lede labels (`**Default.**`, `**On click.**`, etc.), inline-code every real identifier, at most one emphasis-bold term in the body, no headers/lists/links/code blocks, active-voice present tense, name real identifiers (not paraphrases), no first person or hedging.
+- `summary` — refined. Concise statement of the durable insight, not the path to it. **3 sentences max** (overflow belongs in marker descriptions, not the summary). Drop the "I was confused about…" phrasing. Follow `author-informative-trail`'s "Write the summary" / "Formatting rules" section in full: paragraph breaks between sentences, optional bolded lede labels (`**Default.**`, `**On click.**`, etc.), inline-code every real identifier, at most one emphasis-bold term in the body, no headers/lists/links/code blocks, active-voice present tense, name real identifiers (not paraphrases), no first person or hedging.
 - `purpose: 'informative'` — required. The route forces it, but emit it explicitly for clarity.
 - `markers` — start from the source's markers but feel free to: drop dead-end ones, tighten descriptions, reorder so the subject marker reads as the headline. **Do not emit `kind: 'subject'` on any marker.**
 - `views` — keep the same shape as the source (`[{ kind: 'sequence', markers, edges, layout? }]`). Update `markerId` references if you changed marker ids.
@@ -74,7 +74,7 @@ Build a new `TrailPayload`:
 - `share` — leave undefined. Sharing is a separate user action.
 - `notes` — leave undefined. Notes are renderer-only.
 
-Match the schema documented in `file-city-trail` — every field has the same meaning here.
+Match the schema documented in `author-informative-trail` / `author-investigation-trail` — every field has the same meaning here.
 
 ### 4. POST it to the fork route
 
@@ -155,11 +155,11 @@ A good promotion isn't just a copy of the investigation with `purpose: 'informat
 - **Drop investigation cruft.** Dead ends, "let me check…" descriptions, debug markers, things the original author backtracked from — all go.
 - **State the answer in the summary.** Not "I was investigating X" — "X happens because Y, surfaced at Z."
 - **Be tight.** If the investigation was 12 markers, the informative might be 5–8. Density matters.
-- **Strip editorial flourishes from descriptions.** Investigations often carry author commentary — *"The whole feature."*, *"This is where the magic happens."*, *"Everything hinges on this."*, *"Critically important step."*, *"TL;DR: …"*, *"The key insight is …"*, *"Note that …"*, *"Importantly, …"*. Promotion is the moment to delete them. Rewrite the description as a factual statement about what the code does; if the marker is load-bearing, demonstrate that through specific detail (the branch taken, the value checked, the side-effect emitted) — never by telling the reader it matters. Show the cookie, don't announce that there is a cookie worth showing. (Mirrors `file-city-trail`'s "No editorializing" quality-bar rule — apply it on the way through even when the source violated it.)
+- **Strip editorial flourishes from descriptions.** Investigations often carry author commentary — *"The whole feature."*, *"This is where the magic happens."*, *"Everything hinges on this."*, *"Critically important step."*, *"TL;DR: …"*, *"The key insight is …"*, *"Note that …"*, *"Importantly, …"*. Promotion is the moment to delete them. Rewrite the description as a factual statement about what the code does; if the marker is load-bearing, demonstrate that through specific detail (the branch taken, the value checked, the side-effect emitted) — never by telling the reader it matters. Show the cookie, don't announce that there is a cookie worth showing. (Mirrors `author-informative-trail`'s "No editorializing" quality-bar rule — apply it on the way through even when the source violated it.)
 
 ## What doesn't change
 
-- `TrailMarker`, `TrailView`, `TrailNote` schemas — same as `file-city-trail`.
+- `TrailMarker`, `TrailView`, `TrailNote` schemas — same as `author-informative-trail` / `author-investigation-trail`.
 - Snippet validation — same line/file rules.
 - Repo identity discipline — `sourcePath` repo-relative; `repositoryPath` host-private absolute.
 
@@ -174,7 +174,7 @@ A good promotion isn't just a copy of the investigation with `purpose: 'informat
 
 ## Reference
 
-- Sister skill for vanilla authoring: `file-city-trail`
+- Sister skills for authoring from scratch: `author-informative-trail` (canonical), `author-investigation-trail` (exploratory)
 - Sister skill for publishing to web-ade: `publish-trail`
 - Upgrade context: `web-ade/docs/file-city-trail-panel-0.5.81-upgrade.md`
 - Schema source: `industry-themed-file-city-panels/src/types/Trail.ts`
