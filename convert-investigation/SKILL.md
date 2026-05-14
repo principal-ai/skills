@@ -1,9 +1,9 @@
 ---
-name: promote-investigation
-description: Promote an existing investigation trail to a new informative trail by forking it. Read the source investigation, identify the subject marker (the answer it points at), author a refined informative payload, and POST it to the local Principal MCP Bridge's fork route. The route stamps a derivedFrom link so the new informative trail is associated with the original investigation. Use when the user says "promote this trail", "make this an informative trail", "turn this investigation into a canonical trail", or invokes /promote-investigation. NOT for authoring a trail from scratch — use author-informative-trail (canonical from scratch) or author-investigation-trail (exploratory).
+name: convert-investigation
+description: Convert an existing investigation trail into a new informative trail by forking it. Read the source investigation, identify the subject marker (the answer it points at), author a refined informative payload, and POST it to the local Principal MCP Bridge's fork route. The route stamps a derivedFrom link so the new informative trail is associated with the original investigation. Use when the user says "convert this trail", "make this an informative trail", "turn this investigation into a canonical trail", or invokes /convert-investigation. NOT for authoring a trail from scratch — use author-informative-trail (canonical from scratch) or author-investigation-trail (exploratory).
 ---
 
-# Promote Investigation
+# Convert Investigation
 
 Take an existing **investigation** trail and produce a sibling **informative** trail derived from it. The investigation is preserved as a record of how the answer was found; the informative trail is the durable, canonical version that gets shared and signed off on.
 
@@ -13,17 +13,17 @@ This skill is for **fork + link**. The original investigation is never mutated. 
 
 Fire on phrases like:
 
-- "promote this trail to informative"
+- "convert this trail to informative"
 - "make a canonical version of this investigation"
 - "fork this to an informative trail"
 - "turn this investigation into a durable trail"
-- explicit `/promote-investigation` invocation
+- explicit `/convert-investigation` invocation
 
 Don't fire when:
 
 - The user wants to **author** a trail from scratch — that's `author-informative-trail` (canonical) or `author-investigation-trail` (exploratory). For publishing or local-only authoring see `publish-trail` / `local-trails`.
 - The user wants to **share** a trail to web-ade — that's the renderer-driven Share flow.
-- The user wants to **mutate** the investigation in place — promotion is fork-only.
+- The user wants to **mutate** the investigation in place — conversion is fork-only.
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ Confirm with `curl -s http://localhost:3044/health` before posting. If it's not 
 
 ## Inputs
 
-The user supplies (or the caller passes) a **sourceId** — the id of the investigation trail to promote. Resolve everything else from the source.
+The user supplies (or the caller passes) a **sourceId** — the id of the investigation trail to convert. Resolve everything else from the source.
 
 ## Workflow
 
@@ -149,13 +149,13 @@ Read `error`, fix the offending field in your payload, and POST again. Common ca
 
 ## Quality bar
 
-A good promotion isn't just a copy of the investigation with `purpose: 'informative'`. The informative trail should:
+A good conversion isn't just a copy of the investigation with `purpose: 'informative'`. The informative trail should:
 
 - **Lead with the subject.** The first marker the reader encounters should be the destination, or the markers should walk them to it without detours.
 - **Drop investigation cruft.** Dead ends, "let me check…" descriptions, debug markers, things the original author backtracked from — all go.
 - **State the answer in the summary.** Not "I was investigating X" — "X happens because Y, surfaced at Z."
 - **Be tight.** If the investigation was 12 markers, the informative might be 5–8. Density matters.
-- **Strip editorial flourishes from descriptions.** Investigations often carry author commentary — *"The whole feature."*, *"This is where the magic happens."*, *"Everything hinges on this."*, *"Critically important step."*, *"TL;DR: …"*, *"The key insight is …"*, *"Note that …"*, *"Importantly, …"*. Promotion is the moment to delete them. Rewrite the description as a factual statement about what the code does; if the marker is load-bearing, demonstrate that through specific detail (the branch taken, the value checked, the side-effect emitted) — never by telling the reader it matters. Show the cookie, don't announce that there is a cookie worth showing. (Mirrors `author-informative-trail`'s "No editorializing" quality-bar rule — apply it on the way through even when the source violated it.)
+- **Strip editorial flourishes from descriptions.** Investigations often carry author commentary — *"The whole feature."*, *"This is where the magic happens."*, *"Everything hinges on this."*, *"Critically important step."*, *"TL;DR: …"*, *"The key insight is …"*, *"Note that …"*, *"Importantly, …"*. Conversion is the moment to delete them. Rewrite the description as a factual statement about what the code does; if the marker is load-bearing, demonstrate that through specific detail (the branch taken, the value checked, the side-effect emitted) — never by telling the reader it matters. Show the cookie, don't announce that there is a cookie worth showing. (Mirrors `author-informative-trail`'s "No editorializing" quality-bar rule — apply it on the way through even when the source violated it.)
 
 ## What doesn't change
 

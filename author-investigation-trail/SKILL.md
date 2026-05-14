@@ -1,13 +1,13 @@
 ---
 name: author-investigation-trail
-description: Author an investigation trail — the exploratory version of a flow, request path, callback chain, or architecture sequence — and POST it to the local Principal MCP Bridge so it lands in the running electron-app's File City panel. Investigation trails are the version you lay as you figure something out; they're allowed to carry exploratory titles, a "subject" marker pointing at the answer, and a record of how the answer was found. Use when the user says "investigate this flow", "trace this request", "diagram this sequence", "lay an investigation trail through X", "visualize how A calls B", or invokes /author-investigation-trail. NOT for the durable canonical version — use author-informative-trail (or promote-investigation to fork this trail into one). NOT for PR diff walkthroughs — use file-city-trail-review.
+description: Author an investigation trail — the exploratory version of a flow, request path, callback chain, or architecture sequence — and POST it to the local Principal MCP Bridge so it lands in the running electron-app's File City panel. Investigation trails are the version you lay as you figure something out; they're allowed to carry exploratory titles, a "subject" marker pointing at the answer, and a record of how the answer was found. Use when the user says "investigate this flow", "trace this request", "diagram this sequence", "lay an investigation trail through X", "visualize how A calls B", or invokes /author-investigation-trail. NOT for the durable canonical version — use author-informative-trail (or convert-investigation to fork this trail into one). NOT for PR diff walkthroughs — use file-city-trail-review.
 ---
 
 # Author Investigation Trail
 
 Turn a flow — a request path, a startup sequence, a callback chain, a cross-service handshake — into a clickable, ordered **investigation trail** inside the running electron-app's File City panel. Each marker = one stop on the trail; clicking it highlights the corresponding building in 3D and (optionally) opens a Pierre slice snippet showing the relevant source lines.
 
-Investigation trails are the **exploratory** flavor: you lay markers as you trace through the codebase, allowed to wander, allowed to leave dead ends and "let me check…" descriptions, allowed to mark a destination as the **subject**. Once you have your answer, you can fork the investigation into a clean informative trail with `promote-investigation` — the original stays untouched as the record of how the answer was found.
+Investigation trails are the **exploratory** flavor: you lay markers as you trace through the codebase, allowed to wander, allowed to leave dead ends and "let me check…" descriptions, allowed to mark a destination as the **subject**. Once you have your answer, you can fork the investigation into a clean informative trail with `convert-investigation` — the original stays untouched as the record of how the answer was found.
 
 This skill covers the **trace/flow** flavor (`snippet.kind: 'slice'` or no snippet). For PR diff walkthroughs, use the sister `file-city-trail-review` skill. For authoring a fresh canonical/durable trail from scratch (no investigation source to fork), use `author-informative-trail`.
 
@@ -27,7 +27,7 @@ Fire on phrases like:
 Don't fire when:
 
 - The user wants a review of *changes* — that's `file-city-trail-review`.
-- The user already has an investigation and wants the canonical version — that's `promote-investigation`.
+- The user already has an investigation and wants the canonical version — that's `convert-investigation`.
 - The user wants the durable / canonical statement of how something works from scratch (no exploration needed) — that's `author-informative-trail`.
 
 ## Prerequisites
@@ -80,7 +80,7 @@ Investigation trails are allowed (and encouraged) to mark a single marker as the
 
 If the investigation has no clear destination yet — it's still wandering — leave `kind: 'subject'` off. You can add it later by re-POSTing.
 
-The subject concept is **investigation-only**. When this trail is promoted to informative via `promote-investigation`, the subject marker is stripped (the server enforces this).
+The subject concept is **investigation-only**. When this trail is converted to informative via `convert-investigation`, the subject marker is stripped (the server enforces this).
 
 ### 4. Build the payload
 
@@ -156,7 +156,7 @@ Field guidance — marker:
 - `id` — short, stable, unique. Referenced by edges, notes, and view blocks. Lowercase-kebab reads well (`callback-received`, `token-exchange`).
 - `label` — short human title for the snippet drawer header. When omitted, the renderer falls back to the sequence view's `name`.
 - `sourcePath` — **repo-relative** when set. Required if `snippet` is set; optional otherwise.
-- `kind` — `'subject'` marks the investigation's destination. Investigation-only; stripped on promote.
+- `kind` — `'subject'` marks the investigation's destination. Investigation-only; stripped on convert.
 - `description` — markdown. Surfaced in the left-edge floating panel when the marker is selected. This is where the *why* and the surrounding context live. 2–6 sentences. **Factual, not editorial** — see the quality bar's "No editorializing" rule before writing.
 - `snippet.kind` — `'slice'` for runtime traces (this skill). Always set it explicitly.
 - `snippet.startLine`/`endLine` — 1-based, inclusive. Keep windows tight; long snippets bury the focal line.
@@ -184,7 +184,7 @@ Use `label` to convey edge semantics: `"then"`, `"on success"`, `"on 401"`, `"as
 
 Set `payload.summary` to a markdown overview of the flow — what triggers it, what completes it, the headline gotchas. This is the first thing the user sees in the left panel before picking a marker. **3 sentences max.** If you can't fit the whole flow in three sentences, the surplus belongs in marker descriptions, not in the summary.
 
-Investigation summaries are allowed to read as a question or hypothesis ("Why does the WorkOS callback silently redirect-loop on Safari?") rather than a statement. When the investigation reaches an answer, the title and summary can be tightened in place, or the trail can be promoted to informative for the canonical statement.
+Investigation summaries are allowed to read as a question or hypothesis ("Why does the WorkOS callback silently redirect-loop on Safari?") rather than a statement. When the investigation reaches an answer, the title and summary can be tightened in place, or the trail can be converted to informative for the canonical statement.
 
 **Formatting rules** (the summary renders inside a narrow floating overlay; structural markdown breaks the layout):
 
@@ -427,7 +427,7 @@ Multi-repo trails activate one panel per registered repo when broadcast.
 ## Reference
 
 - Sister skill for the canonical / durable version of a trail: `author-informative-trail`
-- Fork this investigation into a clean informative trail with a `derivedFrom` link: `promote-investigation`
+- Fork this investigation into a clean informative trail with a `derivedFrom` link: `convert-investigation`
 - Sister skill for PR diff walkthroughs: `file-city-trail-review`
 - Sister skill for publishing to web-ade: `publish-trail`
 - Sister skill for local-only authoring (no electron-app required): `local-trails`

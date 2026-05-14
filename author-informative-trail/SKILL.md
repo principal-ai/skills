@@ -1,13 +1,13 @@
 ---
 name: author-informative-trail
-description: Author a fresh informative trail — the durable, canonical version of a flow or insight — and POST it to the local Principal MCP Bridge so it lands in the running electron-app's File City panel. Informative trails state what is true about the code now; they are not a record of how the answer was found. Use when the user says "make an informative trail", "author a canonical trail", "lay a durable trail through X", "write a sign-off trail for this flow", or invokes /author-informative-trail. NOT for the exploratory version you lay as you figure something out — use author-investigation-trail. NOT for forking an existing investigation — use promote-investigation. NOT for PR diff walkthroughs — use file-city-trail-review.
+description: Author a fresh informative trail — the durable, canonical version of a flow or insight — and POST it to the local Principal MCP Bridge so it lands in the running electron-app's File City panel. Informative trails state what is true about the code now; they are not a record of how the answer was found. Use when the user says "make an informative trail", "author a canonical trail", "lay a durable trail through X", "write a sign-off trail for this flow", or invokes /author-informative-trail. NOT for the exploratory version you lay as you figure something out — use author-investigation-trail. NOT for forking an existing investigation — use convert-investigation. NOT for PR diff walkthroughs — use file-city-trail-review.
 ---
 
 # Author Informative Trail
 
 Author a fresh **informative** trail from scratch — the durable, canonical version of a flow, behavior, or invariant. Informative trails are the version that gets shared and signed off on. They state *what is true* about the code; they are not a log of how the answer was discovered.
 
-This skill is for **authoring from scratch**. If you already have an investigation trail and want to mint its canonical sibling, use `promote-investigation` instead — that path forks + links, this path doesn't. If you're still exploring as you go, use `author-investigation-trail` and promote later.
+This skill is for **authoring from scratch**. If you already have an investigation trail and want to mint its canonical sibling, use `convert-investigation` instead — that path forks + links, this path doesn't. If you're still exploring as you go, use `author-investigation-trail` and convert later.
 
 ## When to fire
 
@@ -23,7 +23,7 @@ Fire on phrases like:
 Don't fire when:
 
 - The user wants to **explore / investigate** a flow as they figure it out — that's `author-investigation-trail` or `local-trails`.
-- The user has an existing investigation trail and wants to **promote** it — that's `promote-investigation`.
+- The user has an existing investigation trail and wants to **convert** it — that's `convert-investigation`.
 - The user wants a **PR diff walkthrough** — that's `file-city-trail-review`.
 - The user wants to **publish to web-ade** as a shareable link — that's `publish-trail`. Authoring locally first and publishing later is fine; this skill handles the authoring half.
 
@@ -43,7 +43,7 @@ The File City panel must be open on the repo whose paths your `sourcePath` value
 
 The user supplies the **subject** of the trail — the flow, behavior, or invariant the trail will describe ("how the titlebar selection opens the project-info tab", "the WorkOS callback flow", "what happens when a dashboard metric refreshes"). Everything else you resolve from the codebase.
 
-If the user hands you an investigation trail id and says "make this informative", stop and route to `promote-investigation` — that's the fork+link path, and bypassing it loses the `derivedFrom` link.
+If the user hands you an investigation trail id and says "make this informative", stop and route to `convert-investigation` — that's the fork+link path, and bypassing it loses the `derivedFrom` link.
 
 ## The trail schema in 60 seconds
 
@@ -66,7 +66,7 @@ Before writing a payload, get the steps straight by reading source. A good infor
 - A small set of **lanes** (2–6) that bundle related markers by participant or subsystem.
 - An **ordered chain** that walks the reader from entry → answer without detours.
 
-Do the trace first. If you can't name the lanes and the order without looking at code, you're not ready to author — switch to `author-investigation-trail`, figure it out, then promote.
+Do the trace first. If you can't name the lanes and the order without looking at code, you're not ready to author — switch to `author-investigation-trail`, figure it out, then convert.
 
 ### 2. Identify the headline
 
@@ -287,7 +287,7 @@ Run through this list. If any answer is "no" or "not sure," fix it before postin
 
 ## What you're not doing
 
-- **Not investigating.** Informative trails describe what's true now. If you're discovering it as you go, switch to `author-investigation-trail` and promote later with `promote-investigation`.
+- **Not investigating.** Informative trails describe what's true now. If you're discovering it as you go, switch to `author-investigation-trail` and convert later with `convert-investigation`.
 - **Not narrating the discovery.** No *"I noticed…"*, no *"after tracing through…"*, no *"the bug was…"*. The trail does not reference itself or its author.
 - **Not capturing every related file.** Density matters more than coverage. A 6-marker trail that hits the load-bearing decisions beats a 14-marker trail that includes every file the flow touches.
 - **Not setting `kind: 'subject'` on any marker.** That's an investigation-only concept for marking the destination during exploration. Informative trails lead with the answer instead.
@@ -373,7 +373,7 @@ When updating an existing trail, prefer re-POSTing with the same `id` over delet
 ## Reference
 
 - Sister skill for the exploratory version (lay markers as you figure things out): `author-investigation-trail`
-- Forking an existing investigation into an informative trail with a `derivedFrom` link: `promote-investigation`
+- Forking an existing investigation into an informative trail with a `derivedFrom` link: `convert-investigation`
 - Publishing a finished informative trail to web-ade: `publish-trail`
 - Local-only authoring loop (no electron-app required): `local-trails`
 - PR diff walkthroughs: `file-city-trail-review`
