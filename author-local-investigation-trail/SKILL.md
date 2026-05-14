@@ -1,46 +1,54 @@
 ---
-name: author-investigation-trail
-description: Author an investigation trail — the exploratory version of a flow, request path, callback chain, or architecture sequence — and POST it to the local Principal MCP Bridge so it lands in the running electron-app's File City panel. Investigation trails are the version you lay as you figure something out; they're allowed to carry exploratory titles, a "subject" marker pointing at the answer, and a record of how the answer was found. Use when the user says "investigate this flow", "trace this request", "diagram this sequence", "lay an investigation trail through X", "visualize how A calls B", or invokes /author-investigation-trail. NOT for the durable canonical version — use author-informative-trail (or convert-investigation to fork this trail into one). NOT for PR diff walkthroughs — use file-city-trail-review.
+name: author-local-investigation-trail
+description: Author an investigation trail — the exploratory version of a flow, request path, callback chain, or architecture sequence — for the user's own codebase and open it in the standalone trail viewer locally. Investigation trails are the version you lay as you figure something out; they're allowed to carry exploratory titles, a "subject" marker pointing at the answer, and a record of how the answer was found. Writes a TrailPayload JSON to disk and runs `principal-ai trail view --file <path>` — no web-ade publish, no electron-app, no GitHub token. Use when the user says "investigate this flow locally", "trace this request locally", "lay a local investigation trail through X", "visualize how A calls B locally", or invokes /author-local-investigation-trail. NOT for the durable canonical version — use author-local-informative-trail. NOT for publishing to web-ade — use publish-trail. NOT for the electron-app File City panel — use author-investigation-trail.
 ---
 
-# Author Investigation Trail
+# Author Local Investigation Trail
 
-Turn a flow — a request path, a startup sequence, a callback chain, a cross-service handshake — into a clickable, ordered **investigation trail** inside the running electron-app's File City panel. Each marker = one stop on the trail; clicking it highlights the corresponding building in 3D and (optionally) opens a Pierre slice snippet showing the relevant source lines.
+Turn a flow — a request path, a startup sequence, a callback chain, a cross-service handshake — into a clickable, ordered **investigation trail** in the user's own codebase and open it in the standalone `principal-ai/trail-viewer` locally. Each marker = one stop on the trail; clicking it loads the matching slice snippet showing the relevant source lines.
 
-Investigation trails are the **exploratory** flavor: you lay markers as you trace through the codebase, allowed to wander, allowed to leave dead ends and "let me check…" descriptions, allowed to mark a destination as the **subject**. Once you have your answer, you can fork the investigation into a clean informative trail with `convert-investigation` — the original stays untouched as the record of how the answer was found.
+Investigation trails are the **exploratory** flavor: you lay markers as you trace through the codebase, allowed to wander, allowed to leave dead ends and "let me check…" descriptions, allowed to mark a destination as the **subject**. Once you have your answer, you can fork the investigation into a clean informative trail with `author-local-informative-trail` — the original stays on disk as the record of how the answer was found.
 
-This skill covers the **trace/flow** flavor (`snippet.kind: 'slice'` or no snippet). For PR diff walkthroughs, use the sister `file-city-trail-review` skill. For authoring a fresh canonical/durable trail from scratch (no investigation source to fork), use `author-informative-trail`.
+This skill is the **local-viewer sibling** of `author-investigation-trail`. Same authoring discipline, same payload shape — different destination. Instead of POSTing to the electron-app's MCP Bridge, this skill writes the payload to a JSON file and opens it in the standalone trail-viewer via the `principal-ai` CLI.
+
+For the **durable / canonical** flavor (state what's true, no exploration residue, no subject marker), use `author-local-informative-trail`. For the electron-app File City panel destination, use `author-investigation-trail`.
 
 ## When to fire
 
 Fire on phrases like:
 
-- "investigate this flow"
-- "diagram this flow / sequence"
-- "show the sequence of how X works"
-- "trace this request / callback / lifecycle"
-- "visualize how A calls B"
-- "lay a trail / investigation through the auth flow"
-- "make a trail for this startup sequence"
-- explicit `/author-investigation-trail` invocation
+- "investigate this flow locally"
+- "diagram this flow / sequence locally"
+- "show the sequence of how X works, view it locally"
+- "trace this request / callback / lifecycle locally"
+- "visualize how A calls B locally"
+- "lay a local trail / investigation through the auth flow"
+- "make a local trail for this startup sequence"
+- explicit `/author-local-investigation-trail` invocation
 
 Don't fire when:
 
-- The user wants a review of *changes* — that's `file-city-trail-review`.
-- The user already has an investigation and wants the canonical version — that's `convert-investigation`.
-- The user wants the durable / canonical statement of how something works from scratch (no exploration needed) — that's `author-informative-trail`.
+- The user wants the **durable / canonical** statement of how something works — that's `author-local-informative-trail`.
+- The user wants the trail to land in the **electron-app's File City panel** — that's `author-investigation-trail`.
+- The user wants a **PR diff walkthrough** — that's `file-city-trail-review`.
+- The user wants to **publish to web-ade** as a shareable link — that's `publish-trail`. Authoring locally first and publishing later is fine; this skill handles the authoring + local-viewing half.
 
 ## Prerequisites
 
-The electron-app must be running. Endpoints live on the **production** Principal MCP Bridge port:
+The CLI runs via npx — nothing has to be installed up front:
 
+```bash
+npx -y @principal-ai/principal-view-cli@latest trail view --help
 ```
-http://localhost:3044
-```
 
-Confirm with `curl -s http://localhost:3044/health` before posting. If it's not up, tell the user to launch the app rather than guessing other ports.
+Platform support: the bundled trail-viewer ships prebuilt for **macOS arm64** today. Other platforms can pass `--viewer-dir <path>` to a source checkout if they have one; otherwise the CLI exits 2 with a clear message.
 
-The user must have the File City panel open on the repo whose paths your `sourcePath` values reference; otherwise the buildings won't resolve and the trail renders without highlights (no error, just no cyan fill).
+What the user does *not* need for this flow:
+
+- The electron-app running. The standalone viewer is its own process.
+- A GitHub token. Local mode reads slices straight from the working tree.
+- An `<owner>/<repo>` argument. The trail isn't going anywhere; identity doesn't matter.
+- Network access. Fully offline.
 
 ## The trail schema in 60 seconds
 
@@ -51,7 +59,7 @@ Trails split content from layout:
 
 Why split? The trail medium is designed to grow sibling renderers (linear, graph, tree) without changing marker content. v1 only registers the sequence renderer; ship a single sequence view.
 
-Repos: trails carry portable identity, not filesystem paths. For the common single-repo case, ship `authoredAt: { sha, ref }` and omit `repos[]`. The producer machine's filesystem path is sent on the request body as a top-level `repositoryPath` field — separate from the payload — so the host can bucket the broadcast and open the right window.
+Repos: trails carry portable identity, not filesystem paths. For the common single-repo case, ship `authoredAt: { sha, ref }` and omit `repos[]`. The producer machine's filesystem path is passed to the viewer as the `--repo-root` flag at launch — separate from the payload — so slice fetches resolve against the right working tree.
 
 ## Authoring workflow
 
@@ -70,7 +78,7 @@ If you can't articulate the lanes and order without looking at code, do the trac
 For each step, decide whether it warrants a code snippet:
 
 - **Yes** — the step lives at a specific call site or handler the reader will want to read. Capture `sourcePath` (repo-relative) and a tight line window (`startLine`/`endLine`, ~5–25 lines).
-- **No** — the step is conceptual ("user clicks button", "browser issues request", "OS schedules timer"). Leave `sourcePath` and `snippet` off; the marker still appears in the trail, it just won't highlight a building or open a snippet drawer.
+- **No** — the step is conceptual ("user clicks button", "browser issues request", "OS schedules timer"). Leave `sourcePath` and `snippet` off; the marker still appears in the trail, it just won't open a snippet drawer.
 
 Mix freely: a 12-marker trail might have 8 markers with snippets and 4 conceptual ones.
 
@@ -78,9 +86,9 @@ Mix freely: a 12-marker trail might have 8 markers with snippets and 4 conceptua
 
 Investigation trails are allowed (and encouraged) to mark a single marker as the **subject** — the destination the trail directs the reader's focus toward. The cause, the bug location, the answer to the question that triggered the investigation. Set `kind: 'subject'` on that marker.
 
-If the investigation has no clear destination yet — it's still wandering — leave `kind: 'subject'` off. You can add it later by re-POSTing.
+If the investigation has no clear destination yet — it's still wandering — leave `kind: 'subject'` off. You can add it later by editing the JSON and re-opening the file in the viewer (close the tab with Cmd+W first to force a re-load).
 
-The subject concept is **investigation-only**. When this trail is converted to informative via `convert-investigation`, the subject marker is stripped (the server enforces this).
+The subject concept is **investigation-only**. When you mint the canonical sibling via `author-local-informative-trail`, drop the subject marker.
 
 ### 4. Build the payload
 
@@ -95,9 +103,9 @@ interface TrailPayload {
   repos?: TrailRepo[];            // multi-repo registry; omit for single-repo trails
   markers: TrailMarker[];         // REQUIRED, non-empty
   views: TrailView[];             // REQUIRED, non-empty — ship `[{ kind: 'sequence', ... }]` in v1
-  // notes?: TrailNote[]          // renderer-only — stripped from HTTP POSTs. See "User notes".
-  createdAt: string;              // REQUIRED — ISO 8601; route fills if you omit
-  updatedAt: string;              // REQUIRED — ISO 8601; route fills if you omit
+  // notes?: TrailNote[]          // renderer-authored only; see "User notes".
+  createdAt: string;              // REQUIRED — ISO 8601
+  updatedAt: string;              // REQUIRED — ISO 8601
 }
 ```
 
@@ -156,7 +164,7 @@ Field guidance — marker:
 - `id` — short, stable, unique. Referenced by edges, notes, and view blocks. Lowercase-kebab reads well (`callback-received`, `token-exchange`).
 - `label` — short human title for the snippet drawer header. When omitted, the renderer falls back to the sequence view's `name`.
 - `sourcePath` — **repo-relative** when set. Required if `snippet` is set; optional otherwise.
-- `kind` — `'subject'` marks the investigation's destination. Investigation-only; stripped on convert.
+- `kind` — `'subject'` marks the investigation's destination. Investigation-only; drop when minting the informative sibling.
 - `description` — markdown. Surfaced in the left-edge floating panel when the marker is selected. This is where the *why* and the surrounding context live. 2–6 sentences. **Factual, not editorial** — see the quality bar's "No editorializing" rule before writing.
 - `snippet.kind` — `'slice'` for runtime traces (this skill). Always set it explicitly.
 - `snippet.startLine`/`endLine` — 1-based, inclusive. Keep windows tight; long snippets bury the focal line.
@@ -184,7 +192,7 @@ Use `label` to convey edge semantics: `"then"`, `"on success"`, `"on 401"`, `"as
 
 Set `payload.summary` to a markdown overview of the flow — what triggers it, what completes it, the headline gotchas. This is the first thing the user sees in the left panel before picking a marker. **3 sentences max.** If you can't fit the whole flow in three sentences, the surplus belongs in marker descriptions, not in the summary.
 
-Investigation summaries are allowed to read as a question or hypothesis ("Why does the WorkOS callback silently redirect-loop on Safari?") rather than a statement. When the investigation reaches an answer, the title and summary can be tightened in place, or the trail can be converted to informative for the canonical statement.
+Investigation summaries are allowed to read as a question or hypothesis ("Why does the WorkOS callback silently redirect-loop on Safari?") rather than a statement. When the investigation reaches an answer, the title and summary can be tightened in place, or the trail can be cloned into an informative one.
 
 **Formatting rules** (the summary renders inside a narrow floating overlay; structural markdown breaks the layout):
 
@@ -200,17 +208,13 @@ Investigation summaries are allowed to read as a question or hypothesis ("Why do
 
 A useful default shape (not a hard rule): sentence 1 = the **default state** / what the thing does at rest, sentence 2 = the **trigger and the path** it travels when something changes, sentence 3 = the **invariant or detail** that would surprise a reader who stopped after sentence 2.
 
-### 6. POST it
+### 6. Write the payload to a local file
 
-Send the payload with the producer-machine `repositoryPath` as a top-level field beside it (the host uses it to bucket and open a window — it's not part of the portable payload):
+Pick a stable location the user can re-open later. Conventions that work well:
 
-```bash
-curl -s -X POST http://localhost:3044/api/file-city/trail \
-  -H 'content-type: application/json' \
-  -d @payload.json
-```
-
-Where `payload.json` looks like:
+- `<repo-root>/.trails/<flow-name>.json` — keeps the trail next to the code it documents (add to `.gitignore` if it's WIP).
+- `~/.principal/local/<flow-name>.json` — user-scoped, survives across repos.
+- `/tmp/<flow-name>-trail.json` — throwaway / iteration.
 
 ```json
 {
@@ -222,94 +226,98 @@ Where `payload.json` looks like:
   "markers": [...],
   "views": [{ "kind": "sequence", "markers": [...], "edges": [...] }],
   "createdAt": "2026-05-13T18:00:00.000Z",
-  "updatedAt": "2026-05-13T18:00:00.000Z",
-  "repositoryPath": "/Users/you/code/auth-server"
+  "updatedAt": "2026-05-13T18:00:00.000Z"
 }
 ```
 
-Successful response:
+For `authoredAt.sha`, use the current commit if you want pinned provenance:
 
-```json
-{ "success": true, "id": "<id>", "broadcastTo": 1, "evictedIds": [], "windowOpened": "created" }
+```bash
+git rev-parse HEAD
 ```
 
-- `id` — echoed back. Re-POSTing with the same `id` updates in place; `notes` already on disk are preserved.
-- `broadcastTo` — how many renderer windows received the payload. `0` is benign right after the route opens a fresh window — the new window picks up the trail from the `?openTrailId=` arg baked into its URL by `openDevWorkspaceWindow`.
-- `evictedIds` — ids dropped by the library's retention policy when this push exceeded the cap. Surface them to the user only if relevant.
-- `windowOpened` — `'focused'` (existing dev-workspace window for the repo brought to front), `'created'` (new window opened for it with this trail already wired in via `?openTrailId=`), `'none'` (no `repositoryPath` or the path isn't a git repo and Alexandria couldn't auto-register it).
+For local-only workflows, the sha is informational — slices come from the working tree, not from GitHub. You can leave `authoredAt` off entirely if there's no surrounding context to record.
 
-Every POST broadcasts and opens a window — there's no "persist quietly without showing it" flag. To bake a trail into the library without activating it, POST it once, then close the trail tab; nothing references "active" anywhere.
+### 7. Open in the viewer
 
-Write the payload to a temp file rather than inlining a large JSON blob into the curl command.
+```bash
+npx -y @principal-ai/principal-view-cli@latest trail view \
+  --file /path/to/trail.json \
+  --repo-root /path/to/repo
+```
 
-### 7. Tell the user what to do
+What happens:
 
-The dev-workspace window opens itself for registered repos, so guidance is short:
+1. The CLI reads the JSON, decides mode (local because `--file` defaults to local), and assembles env for the viewer.
+2. If a viewer is **already running**, the CLI hands the trail off via Unix socket and exits 0. Existing window comes to front, new tab appears.
+3. If no viewer is running, the CLI spawns one. First launch self-extracts the bundle (~5s); subsequent launches are near-instant.
+4. The viewer opens with two tabs: **Library** (always present, lists cached trails) + the trail you just opened.
 
-1. If `windowOpened` was `'created'` or `'focused'`, the File City panel is already in front. If it was `'none'`, the repo isn't registered in Alexandria yet — tell the user to add it from the launcher, then activate the saved trail from the Trails sidebar.
-2. Click a marker to step through. Selected marker: matching building paints cyan; non-marker buildings dim to grey so the involved files stand out; a leader line connects the building to a Pierre snippet drawer on the right; the description shows in the left markdown overlay.
-3. Navigation lives in the **left** overlay (Start → prev/next/position bar). The **right** side, before any marker is selected, lists each marker-with-source in order so the user can scan files and jump to a stop.
-4. To close the trail tab in the renderer, just close it — there is no "active" pointer to clear. To delete a saved entry from disk: `DELETE /api/file-city/trail/:id` (see "Persistence and library").
+`--repo-root` defaults to `cwd` when omitted, so:
 
-## Persistence and library
+```bash
+cd /path/to/repo
+npx -y @principal-ai/principal-view-cli@latest trail view --file ./trail.json
+```
 
-Every accepted POST is persisted to disk under `~/.principal/trails/<bucket>/<id>.json`, keyed by `id`. The host never tracks a "currently-active" trail on disk — which trail a window is showing is per-window state driven by the `?openTrailId=` URL arg at window creation and IPC `PAYLOAD_SET` broadcasts after that. A "Trails" panel in the dev-workspace sidebar lists what's saved. The HTTP surface mirrors what the panel does:
+works as long as the user is inside the repo.
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/file-city/trail` | Create or update (when `id` matches an existing entry). Persists, broadcasts, and opens/focuses the dev-workspace window with this trail's id baked into its URL so the trail tab auto-opens. Strips any `notes` from the body. |
-| `GET` | `/api/file-city/trail/library?repositoryPath=<abs>` | List saved entries for the given repo (plus repo-agnostic ones); `repositoryPath` optional — omitted returns every entry. Returns `{ entries }`. |
-| `GET` | `/api/file-city/trail/:id` | Load a saved payload by id. Returns the payload **with `notes` inline** — use this when an agent needs to read user-authored context. |
-| `POST` | `/api/file-city/trail/activate` | Body `{ "id": "<id>" }`. Loads the saved entry, broadcasts `PAYLOAD_SET`, and opens/focuses the dev-workspace window with this trail's id baked in. Same UX as POSTing the trail again, without re-sending the body. |
-| `DELETE` | `/api/file-city/trail/:id` | Permanently delete the saved entry. Windows currently showing this trail clear their tab; saved entries unrelated to the deleted id are unaffected. |
+### 8. Iterate
 
-When updating an existing trail, prefer re-POSTing with the same `id` over deleting and re-creating — `notes` already on the entry are preserved across the update.
+The viewer is single-instance and dedupes by `trailFilePath`:
 
-## User notes
+- Re-running the same `--file <path>` focuses the existing tab (does **not** open a duplicate).
+- Editing the JSON and re-running picks up changes — but **only if the tab was closed first** (Cmd+W). Open tabs hold the parsed payload in memory; close the tab and re-open to force a re-load.
+- Different `--file` paths each get their own tab.
+- The Library tab lists every cached trail under `~/.principal/trails/...` and routes clicks to local mode automatically when the slug decodes to a working tree on disk.
 
-`TrailPayload.notes` carries user-authored snippet annotations (with slice or diff anchors) and markdown comments anchored to marker descriptions or the payload summary. They are **renderer-authored only**:
+Investigations are explicitly allowed to iterate — that's the point. Lay markers as you trace, re-open to see the chain, add or rename markers, close + re-open to refresh. When you have your answer, mint the canonical sibling with `author-local-informative-trail`.
 
-- HTTP `POST` bodies have `notes` stripped during validation. Don't try to push notes from a script — they won't land. Notes are created via the renderer's note composers and persisted through IPC.
-- `GET /api/file-city/trail/:id` returns notes inline. When summarizing or revising a trail, read this endpoint to pick up the user's commentary.
-- Re-POSTing a payload by `id` keeps existing notes; ids and content are preserved across updates.
+To force-quit and start fresh: Cmd+Q the viewer window; the next CLI invocation spawns a new instance.
 
-## Sharing a trail to web-ade
+## How the viewer resolves slices
 
-The dev-workspace Trails panel can publish a saved trail to web-ade so other contributors with GitHub read access to the same repo can pull it. This is a renderer-driven feature (Share button + "Shared with this repo" rows) — there is no HTTP entry point.
+In **local mode** (default for `--file`), `readFile` requests from the renderer go to:
 
-Worth knowing because:
+```
+<repo-root>/<sourcePath>
+```
 
-- Sharing **bakes** every diff snippet's `newContents` from the working tree before uploading. Slice snippets stay slim — they're resolved from the reader's checkout — so trace/flow trails (this skill) bake very little.
-- The bake cap is 10MB on web-ade's side. Tight `startLine`/`endLine` windows keep shared trails under that.
-- If a `sourcePath` no longer exists on disk at share time, the bake step fails with `MISSING_FILES_NEEDS_CONFIRM` until the user retries with "share anyway".
+Sandboxed: paths starting with `/` have the leading slash stripped, paths starting with `GitHub/` have that prefix stripped (renderer compat), and any path that escapes `repo-root` is refused with "Path escapes repo root."
+
+If a marker's slice doesn't resolve, the snippet drawer surfaces the read error. Common causes:
+
+- `sourcePath` is absolute when it should be repo-relative.
+- `--repo-root` points at the wrong directory.
+- The file was renamed / deleted since the trail was authored.
+- `startLine`/`endLine` are 0-indexed by mistake (they're 1-based, inclusive).
 
 ## Validation rules to obey
 
-The route rejects payloads that violate these — pre-check before posting:
+The viewer is permissive — a trail with broken sourcePaths still renders, you just see read errors when you click those markers. The hard validation rules to obey:
 
 - `id` is a non-empty string.
 - `title` is a non-empty string.
 - `markers` is a non-empty array; every marker has a string `id`; marker ids are unique within the payload.
 - Every marker with `snippet` also has `sourcePath`.
-- For `kind: 'slice'`: `startLine`/`endLine` are positive integers with `endLine >= startLine`; `focusLine` (when present) is a positive integer; `contextLines` (when present) is non-negative.
-- `views` is a non-empty array; every view has a string `kind`. v1 only fully validates `kind: 'sequence'` view blocks; other kinds are accepted but not strictly checked.
-- For `kind: 'sequence'` views: `markers` is an array where every `markerId` references an existing marker and every entry has a string `name`; `edges` is an array where every edge has string `id`, `fromEvent`, `toEvent` (and `fromEvent`/`toEvent` should reference valid marker ids).
-- Body must stay under 10MB.
+- For `snippet.kind: 'slice'`: `startLine`/`endLine` are positive integers with `endLine >= startLine`; `focusLine` (when present) is a positive integer; `contextLines` (when present) is non-negative.
+- `views` is a non-empty array; ship `[{ kind: 'sequence', markers, edges, layout? }]`.
+- For sequence views: every `markerId` references an existing marker; every entry has a string `name`; every edge has string `id`, `fromEvent`, `toEvent` (referencing valid marker ids).
 
-If `sourcePath` doesn't resolve to a building in the city, the trail still renders — the highlight is just skipped. Don't treat that as an error.
+If you plan to publish later, also obey: body under 10MB; `id` is not the reserved word `publish`.
 
 ## Path discipline
 
 - All `sourcePath` values are **repo-relative** (e.g. `auth-server/src/routes/workos.ts`), not absolute, not prefixed with the repo name.
-- `repositoryPath` is the **absolute filesystem path on the producer machine**. It travels on the request body **alongside** the payload, not inside it. Always set it — it's how the host opens the right dev-workspace window. The portable payload itself never carries filesystem paths.
-- For multi-repo trails, ship `repos: [...]` and set `marker.repo` on every marker. Single-repo trails should use the `authoredAt` shorthand and leave `repos[]` and `marker.repo` unset.
+- `--repo-root` is the **absolute filesystem path** the viewer resolves slices against. Pass it explicitly when the user runs the CLI from a different cwd; otherwise the CLI defaults to `process.cwd()`.
+- For multi-repo trails, ship `repos: [...]` and set `marker.repo` on every marker. Single-repo trails use the `authoredAt` shorthand and leave `repos[]` and `marker.repo` unset.
 
 ## Lane ordering
 
-The sequence renderer resolves each marker's lane by reading its dotted `name` (`auth.workos.callback.received` → lane `auth`, drilled deeper if the renderer's `openedNamespaces` matches). Left-to-right lane order is controlled two ways:
+The sequence renderer resolves each marker's lane by reading its dotted `name` (`auth.workos.callback.received` → lane `auth`). Left-to-right lane order is controlled two ways:
 
 - **Default — first-marker order.** The lane whose first marker appears earliest in `views[0].markers[]` becomes leftmost. For most flows this is enough: order markers the way the user should read them and the lanes fall out naturally.
-- **Explicit — `views[0].layout.laneOrder`.** Pass an array of resolved namespaces left-to-right. Listed lanes are placed first in the given order; any unlisted lanes (including ones that materialize after a drill-down) fall back to first-marker order behind them. Unknown entries are ignored, so it is safe to list namespaces that may not be present in every dataset.
+- **Explicit — `views[0].layout.laneOrder`.** Pass an array of resolved namespaces left-to-right. Listed lanes are placed first in the given order; any unlisted lanes fall back to first-marker order behind them. Unknown entries are ignored, so it is safe to list namespaces that may not be present in every dataset.
 
 ```json
 {
@@ -383,7 +391,7 @@ Useful when onboarding contributors. Markers run in temporal order: bootstrap �
 
 ### Bare trail with no code
 
-If the user wants a conceptual flow ("user clicks 'export', browser downloads file, server logs it"), skip `sourcePath` and `snippet` on most markers. The trail still renders cleanly; you just won't get building highlights.
+If the user wants a conceptual flow ("user clicks 'export', browser downloads file, server logs it"), skip `sourcePath` and `snippet` on most markers. The trail still renders cleanly; you just won't get snippet drawers on those markers.
 
 ### Multi-repo trail
 
@@ -403,33 +411,49 @@ Ship `repos: [...]` with one entry per repo, set `marker.repo` on every marker, 
 }
 ```
 
-Multi-repo trails activate one panel per registered repo when broadcast.
+Multi-repo local trails are best viewed with the working tree for at least the primary repo available at `--repo-root`; markers anchored to other repos surface read errors on snippet open unless those checkouts are sandboxed under the same root.
+
+## Persistence and library
+
+Trail files live wherever you write them (see step 6). The viewer also reads its **cache library** at `~/.principal/trails/`:
+
+- `~/.principal/trails/local/<path-slug>/<id>.json` — trails authored against a local working tree. The slug is `encodePathForPurl(repoRoot)` (slashes become dashes).
+- `~/.principal/trails/by-id/<id>.json` — trails without repo identity.
+- `~/.principal/trails/<purl-namespace>/<purl-name>/<id>.json` — hierarchical layout for trails with `repos[0].id` (github/gitlab/etc).
+
+The library tab in the viewer walks this tree and shows every entry. To make a trail show up in the library, either author it directly into the cache layout above, or open it once with `principal-ai trail view --file …` and re-open from the library after.
+
+## User notes
+
+`TrailPayload.notes` carries user-authored snippet annotations and markdown comments. They are **renderer-authored only**:
+
+- Don't hand-author `notes` in the JSON. The viewer's note composer is the entry point.
+- The bun host writes mutations back into the JSON file in place: `createTrailNote` appends, `updateTrailNote` mutates by id + bumps `updatedAt`, `deleteTrailNote` filters out. The `{ entry, payload }` wrapper used by web-ade fetches is preserved on rewrite.
+- Re-opening the trail (or closing + reopening the tab) re-reads `notes` from disk.
+
+Investigation notes are especially useful — leave a snippet annotation when a dead end turns up, or a markdown note on the summary when you reach the subject. Notes survive the iteration loop because the bun host re-reads the file on every open.
 
 ## When things go wrong
 
 | Symptom | Likely cause |
 |---|---|
-| `curl: (7) Failed to connect to localhost port 3044` | App isn't running, or it's bound to dev port 3054. This skill targets prod only — confirm with the user. |
-| `400` with `markers must be a non-empty array` | Forgot to populate `markers` or sent `events` (sequence-diagram terminology — wrong field). |
-| `400` with `views must be a non-empty array` | Forgot the view block. v1 trails always need `views: [{ kind: 'sequence', ... }]`. |
-| `400` with `sequence view: unknown markerId` | A `views[0].markers[].markerId` doesn't appear in `payload.markers[].id`. Common after renaming ids late. |
-| `400` with `every marker must have a string id` | A marker is missing `id` or has a non-string id. |
-| `400` with `id must be a non-empty string` / `title must be a non-empty string` | Producer didn't generate `id` (use `crypto.randomUUID()`) or set `title`. Both are required. |
-| `400` with `marker X: snippet requires a sourcePath` | Set a `snippet` block on a marker that has no `sourcePath`. Either drop the snippet or add the path. |
-| `broadcastTo: 0` | No renderer is listening. App may be starting up or no window is open. |
-| Trail renders, no highlights | `sourcePath` values don't match any building. Check they're repo-relative and the panel is open on the right repo. |
-| Snippet shows wrong lines | `startLine`/`endLine` were 0-based by mistake — they're 1-based, inclusive. |
-| `windowOpened: 'none'` even though `repositoryPath` was set | Repo isn't registered in Alexandria. Auto-open only works for known repos; tell the user to add it from the launcher. |
-| Notes posted via curl don't appear | Expected — the route strips `notes` on POST. Use the renderer's note composer or the IPC API. |
-| Re-POST creates a duplicate library entry | Trail `id` is required on every POST. If you're seeing duplicates, you're generating a fresh id each time instead of reusing the one you intend to update. |
+| Viewer opens with empty markers | `markers` array is empty or every marker is missing `id`. |
+| Viewer renders but every marker errors on click | `--repo-root` doesn't match where `sourcePath` values were authored against. |
+| `Path escapes repo root: <path>` in snippet drawer | A marker's `sourcePath` resolves outside `--repo-root` (e.g. `../other-repo/x.ts`). Trails are single-repo by design; for multi-repo, ship `repos: [...]` and `marker.repo`. |
+| `Render error: undefined is not an object (evaluating 'trail2.views[0]')` | `views` array is missing or empty. v1 trails always need `views: [{ kind: 'sequence', ... }]`. |
+| Library-tab click loads in remote mode and snippets fail with "no repo identity" | The decoded path slug doesn't point at a directory on disk. Open via `--file` with explicit `--repo-root`. |
+| Viewer doesn't open on second invocation | Already running and the new trail handed off via socket — check the existing window for a new tab. |
+| Edit-and-re-open doesn't pick up changes | Tab caches the payload. Close the tab (Cmd+W), re-fire the CLI invocation. |
+| `principal-trail-viewer: no prebuilt bundle for <os>-<arch>` | Currently only macOS arm64 is shipped. Pass `--viewer-dir <path>` to a source checkout, or wait for the per-arch fan-out. |
 | Lanes appear in unexpected order | First-marker order in `views[0].markers[]` drives default lane layout. Either reorder, or set `views[0].layout.laneOrder` explicitly. |
+| Snippet shows wrong lines | `startLine`/`endLine` were 0-based by mistake — they're 1-based, inclusive. |
 
 ## Reference
 
-- Sister skill for the canonical / durable version of a trail: `author-informative-trail`
-- Fork this investigation into a clean informative trail with a `derivedFrom` link: `convert-investigation`
-- Sister skill for PR diff walkthroughs: `file-city-trail-review`
-- Sister skill for publishing to web-ade: `publish-trail`
-- Sister skill for local-only authoring + viewer (no electron-app required): `author-local-investigation-trail`
+- Sister skill for the canonical / durable version of a trail: `author-local-informative-trail`
+- Sister skill for the electron-app File City panel destination: `author-investigation-trail`
+- Forking an existing investigation into an informative trail with a `derivedFrom` link (electron-app path): `convert-investigation`
+- Publishing a finished trail to web-ade: `publish-trail`
+- PR diff walkthroughs: `file-city-trail-review`
 - Schema source: `industry-themed-file-city-panels/src/types/Trail.ts`
-- Design doc: `industry-themed-file-city-panels/docs/TRAIL_DESIGN.md`
+- Viewer modes design: `principal-view-core-library/docs/TRAIL_VIEWER_MODES.md`

@@ -21,7 +21,7 @@ Fire on phrases like:
 
 Don't fire when:
 
-- The user wants to **author** a trail from scratch — that's `author-informative-trail` (canonical) or `author-investigation-trail` (exploratory). For publishing or local-only authoring see `publish-trail` / `local-trails`.
+- The user wants to **author** a trail from scratch — that's `author-informative-trail` (canonical) or `author-investigation-trail` (exploratory). For local-viewer authoring (no electron-app) see `author-local-informative-trail` / `author-local-investigation-trail`. For publishing see `publish-trail`.
 - The user wants to **share** a trail to web-ade — that's the renderer-driven Share flow.
 - The user wants to **mutate** the investigation in place — conversion is fork-only.
 
