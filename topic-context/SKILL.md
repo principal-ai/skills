@@ -1,6 +1,6 @@
 ---
 name: topic-context
-description: Read the topic an agent was briefed on and keep its description current as work progresses — fetch the topic + its trails from the local Principal MCP Bridge, append discovered context, or replace one ## / ### section of the description in place (e.g. update a status block). Use when you were handed a "Fetch http://localhost:3044/api/topics/<id> to begin working on topic …" brief, or when the user says "update the topic", "mark this section done on the topic", "leave context on the topic", "fix the status on the topic", "what's this topic about". The description is editable over the bridge via append (grow) and section upsert (replace-in-place). NOT for creating a topic — use create-topic (web-only). NOT for browsing topics a user published — use discover-trails. NOT for editing a topic's title or trail list — those go through the owner UI or web-ade routes.
+description: Read the topic an agent was briefed on and keep its description current as work progresses — fetch the topic + its trails from the local Principal MCP Bridge, append discovered context, or replace one ## / ### section of the description in place (e.g. update a status block). Use when you were handed a "Fetch http://localhost:3044/api/topics/<id> to begin working on topic …" brief, or when the user says "update the topic", "mark this section done on the topic", "leave context on the topic", "fix the status on the topic", "what's this topic about". The description is editable over the bridge via append (grow) and section upsert (replace-in-place). NOT for creating a topic — use create-topic (local-bridge create). NOT for browsing topics a user published — use discover-trails. NOT for editing a topic's title or trail list — those go through the owner UI or web-ade routes.
 ---
 
 # Topic Context
@@ -14,8 +14,8 @@ agent — sees current context instead of a stale one.
 
 This is the **local-bridge** topic skill. It talks to the running
 electron-app's Principal MCP Bridge, not web-ade. It's the read-and-keep-current
-sibling to `create-topic` (web-only creation) and `discover-trails` (web-only
-browsing).
+sibling to `create-topic` (local-bridge creation) and `discover-trails`
+(web-only browsing).
 
 ## When to fire
 
@@ -32,8 +32,8 @@ Fire on phrases / situations like:
 
 Don't fire when the user wants to:
 
-- **Create** a topic — use `create-topic` (web-only, via the `principal-ai`
-  CLI). Topics are created on web-ade, not the bridge.
+- **Create** a topic — use `create-topic` (creates locally over this same
+  bridge via `POST /api/topics`).
 - **Browse** topics a user has published — use `discover-trails`.
 - **Edit the title or the trail list** — title/description edits to a
   *published* topic and trail add/remove/reorder go through the owner UI on
@@ -207,7 +207,7 @@ Don't try to force it; the 409 is the guard doing its job.
 
 ## What this skill doesn't do
 
-- It doesn't **create** topics (web-only — `create-topic`) or **browse**
+- It doesn't **create** topics (`create-topic`) or **browse**
   published ones (`discover-trails`).
 - It doesn't edit the **title** or the **trail list** — those route through the
   owner UI / web-ade. Only the description is bridge-editable.
@@ -241,4 +241,4 @@ Full-document edits stay a human action in the UI. Work within that grain.
 - Registry + sync (write-through to web-ade when published): `electron-app/src/main/stores/TopicRegistryService.ts`
 - Section engine: `upsertSection` / `splitSections` in `@principal-ade/markdown-utils` (≥ 0.3.1)
 - The brief that points agents here: `electron-app/src/renderer/components/Titlebar/BriefAgentButton.tsx`
-- Sister skills: `create-topic` (web create), `discover-trails` (web read), `document-notes` (local-bridge notes)
+- Sister skills: `create-topic` (local-bridge create), `discover-trails` (web read), `document-notes` (local-bridge notes)
