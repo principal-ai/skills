@@ -1,6 +1,6 @@
 ---
 name: author-local-investigation-trail
-description: Author an investigation trail — the exploratory version of a flow, request path, callback chain, or architecture sequence — for the user's own codebase and open it in the standalone trail viewer locally. Investigation trails are the version you lay as you figure something out; they're allowed to carry exploratory titles, a "subject" marker pointing at the answer, and a record of how the answer was found. Writes a TrailPayload JSON to disk and runs `principal-ai trail view --file <path>` — no web-ade publish, no electron-app, no GitHub token. Use when the user says "investigate this flow locally", "trace this request locally", "lay a local investigation trail through X", "visualize how A calls B locally", or invokes /author-local-investigation-trail. NOT for the electron-app File City panel — use author-investigation-trail.
+description: Author an investigation trail — the exploratory version of a flow, request path, callback chain, or architecture sequence — for the user's own codebase and open it in the standalone trail viewer locally. Investigation trails are the version you lay as you figure something out; they're allowed to carry exploratory titles, a "subject" marker pointing at the answer, and a record of how the answer was found. Writes a TrailPayload JSON to disk and runs `principal-ai trail view --file <path>` — fully local and offline: no publish step, no network, no GitHub token. Use when the user says "investigate this flow locally", "trace this request locally", "lay a local investigation trail through X", "visualize how A calls B locally", or invokes /author-local-investigation-trail.
 ---
 
 # Author Local Investigation Trail
@@ -9,9 +9,9 @@ Turn a flow — a request path, a startup sequence, a callback chain, a cross-se
 
 Investigation trails are the **exploratory** flavor: you lay markers as you trace through the codebase, allowed to wander, allowed to leave dead ends and "let me check…" descriptions, allowed to mark a destination as the **subject**.
 
-This skill is the **local-viewer sibling** of `author-investigation-trail`. Same authoring discipline, same payload shape — different destination. Instead of POSTing to the electron-app's MCP Bridge, this skill writes the payload to a JSON file and opens it in the standalone trail-viewer via the `principal-ai` CLI.
+This skill writes the payload to a JSON file and opens it in the standalone `principal-ai/trail-viewer` via the `principal-ai` CLI. Everything stays on the local machine — there is no publish, upload, or server step.
 
-For the electron-app File City panel destination, use `author-investigation-trail`.
+**The only delivery channel is the `principal-ai` CLI.** `principal-ai trail view --file <path>` hands the trail off to a running viewer over a Unix socket, or spawns a new viewer locally. The trail stays on disk and in the local viewer — never send the payload anywhere else.
 
 ## When to fire
 
@@ -28,9 +28,8 @@ Fire on phrases like:
 
 Don't fire when:
 
-- The user wants the trail to land in the **electron-app's File City panel** — that's `author-investigation-trail`.
-- The user wants a **PR diff walkthrough** — that's `file-city-trail-review`.
-- The user wants to **publish to web-ade** as a shareable link — publish from the Principal app UI. Authoring locally first and publishing later is fine; this skill handles the authoring + local-viewing half.
+- The user wants to **publish or share** the trail beyond their own machine — this skill has no upload or publish step; it only writes a local file and opens it in the local viewer.
+- The user explicitly asks for a destination other than the local standalone viewer.
 
 ## Prerequisites
 
@@ -44,7 +43,7 @@ Platform support: the bundled trail-viewer ships prebuilt for **macOS arm64** to
 
 What the user does *not* need for this flow:
 
-- The electron-app running. The standalone viewer is its own process.
+- Any companion app or background service. The CLI launches the standalone viewer as its own self-contained process.
 - A GitHub token. Local mode reads slices straight from the working tree.
 - An `<owner>/<repo>` argument. The trail isn't going anywhere; identity doesn't matter.
 - Network access. Fully offline.
@@ -87,7 +86,7 @@ Investigation trails are allowed (and encouraged) to mark a single marker as the
 
 If the investigation has no clear destination yet — it's still wandering — leave `kind: 'subject'` off. You can add it later by editing the JSON and re-opening the file in the viewer (close the tab with Cmd+W first to force a re-load).
 
-The subject concept is **investigation-only**. If you later author a canonical version in the app via `author-informative-trail`, drop the subject marker.
+The subject concept is **investigation-only** — it marks where the exploration was headed. If you later refine the trail into a polished, dead-end-free version, drop the subject marker.
 
 ### 4. Build the payload
 
@@ -163,7 +162,7 @@ Field guidance — marker:
 - `id` — short, stable, unique. Referenced by edges, notes, and view blocks. Lowercase-kebab reads well (`callback-received`, `token-exchange`).
 - `label` — short human title for the snippet drawer header. When omitted, the renderer falls back to the sequence view's `name`.
 - `sourcePath` — **repo-relative** when set. Required if `snippet` is set; optional otherwise.
-- `kind` — `'subject'` marks the investigation's destination. Investigation-only; drop when minting the informative sibling.
+- `kind` — `'subject'` marks the investigation's destination. Investigation-only; drop it when you refine the trail into a polished version.
 - `description` — markdown. Surfaced in the left-edge floating panel when the marker is selected. This is where the *why* and the surrounding context live. 2–6 sentences. **Factual, not editorial** — see the quality bar's "No editorializing" rule before writing.
 - `snippet.kind` — `'slice'` for runtime traces (this skill). Always set it explicitly.
 - `snippet.startLine`/`endLine` — 1-based, inclusive. Keep windows tight; long snippets bury the focal line.
@@ -427,7 +426,7 @@ The library tab in the viewer walks this tree and shows every entry. To make a t
 `TrailPayload.notes` carries user-authored snippet annotations and markdown comments. They are **renderer-authored only**:
 
 - Don't hand-author `notes` in the JSON. The viewer's note composer is the entry point.
-- The bun host writes mutations back into the JSON file in place: `createTrailNote` appends, `updateTrailNote` mutates by id + bumps `updatedAt`, `deleteTrailNote` filters out. The `{ entry, payload }` wrapper used by web-ade fetches is preserved on rewrite.
+- The bun host writes mutations back into the JSON file in place: `createTrailNote` appends, `updateTrailNote` mutates by id + bumps `updatedAt`, `deleteTrailNote` filters out. The `{ entry, payload }` wrapper, when present, is preserved on rewrite.
 - Re-opening the trail (or closing + reopening the tab) re-reads `notes` from disk.
 
 Investigation notes are especially useful — leave a snippet annotation when a dead end turns up, or a markdown note on the summary when you reach the subject. Notes survive the iteration loop because the bun host re-reads the file on every open.
@@ -449,10 +448,6 @@ Investigation notes are especially useful — leave a snippet annotation when a 
 
 ## Reference
 
-- Canonical / durable version of a trail (in the app): `author-informative-trail`
-- Sister skill for the electron-app File City panel destination: `author-investigation-trail`
-- Forking an existing investigation into an informative trail with a `derivedFrom` link (electron-app path): `convert-investigation`
-- Publishing a finished trail to web-ade: from the Principal app UI
-- PR diff walkthroughs: `file-city-trail-review`
+- CLI reference: `principal-ai trail view --help`
 - Schema source: `industry-themed-file-city-panels/src/types/Trail.ts`
 - Viewer modes design: `principal-view-core-library/docs/TRAIL_VIEWER_MODES.md`
