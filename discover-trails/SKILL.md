@@ -1,6 +1,6 @@
 ---
 name: discover-trails
-description: Browse trails and topics that already exist on web-ade — list everything a given user has published, fetch a specific trail or topic by id or URL, or list the topics curated by a user. Read-only; no publishing, no editing. Use when the user says "what trails has X published", "show me my recent trails", "list topics from <user>", "summarize this trail", "what's in this topic", "find trails about <subject>", or invokes /discover-trails. Posts via the `principal-ai` CLI using the user's GitHub token (resolved locally from `gh auth token` or git credential helper). NOT for authoring or publishing — use publish-trail or the author-* skills.
+description: Browse trails and topics that already exist on web-ade — list everything a given user has published, fetch a specific trail or topic by id or URL, or list the topics curated by a user. Read-only; no publishing, no editing. Use when the user says "what trails has X published", "show me my recent trails", "list topics from <user>", "summarize this trail", "what's in this topic", "find trails about <subject>", or invokes /discover-trails. Posts via the `principal-ai` CLI using the user's GitHub token (resolved locally from `gh auth token` or git credential helper). NOT for authoring or publishing — author with the author-* skills, and publish from the Principal app UI.
 ---
 
 # Discover Trails
@@ -9,7 +9,7 @@ Browse the read side of web-ade — find out what trails and topics already
 exist, fetch their payloads, and inspect them — without ever publishing
 or editing anything.
 
-This is the **read-only companion** to `publish-trail` and `create-topic`.
+This is the **read-only companion** to `create-topic` and the app's publish flow.
 Same CLI (`principal-ai`), same GitHub token chain (gh CLI → git credential
 helper), no app required. The four endpoints this skill covers form the
 discovery surface every other web-ade-facing skill builds on.
@@ -31,8 +31,8 @@ Don't fire when:
 - The user wants to **author** a trail — use `author-investigation-trail`
   (in-app, exploratory), `author-informative-trail` (in-app, canonical),
   or their `author-local-*` siblings (no app).
-- The user wants to **publish** a local trail to web-ade — use
-  `publish-trail`.
+- The user wants to **publish** a local trail to web-ade — publish from the
+  Principal app UI.
 - The user wants to **curate** a topic — use `create-topic`.
 - The user wants to **review a PR** — use `file-city-trail-review`.
 
@@ -232,4 +232,4 @@ produce so the user knows there's something they don't have access to.
 - It doesn't **discover trails you haven't been told about** — there's
   no global "all recent trails" feed in v1. Discovery is per-user.
 - It doesn't **modify anything** — every command here is `GET`. Pair
-  with `publish-trail` / `create-topic` for the write side.
+  with `create-topic` (and the app's publish flow) for the write side.

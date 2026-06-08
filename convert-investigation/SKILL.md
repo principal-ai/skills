@@ -21,7 +21,7 @@ Fire on phrases like:
 
 Don't fire when:
 
-- The user wants to **author** a trail from scratch — that's `author-informative-trail` (canonical) or `author-investigation-trail` (exploratory). For local-viewer authoring (no electron-app) see `author-local-informative-trail` / `author-local-investigation-trail`. For publishing see `publish-trail`.
+- The user wants to **author** a trail from scratch — that's `author-informative-trail` (canonical) or `author-investigation-trail` (exploratory). For local-viewer authoring (no electron-app) see `author-local-investigation-trail`. For publishing, use the Principal app UI.
 - The user wants to **share** a trail to web-ade — that's the renderer-driven Share flow.
 - The user wants to **mutate** the investigation in place — conversion is fork-only.
 
@@ -175,6 +175,6 @@ A good conversion isn't just a copy of the investigation with `purpose: 'informa
 ## Reference
 
 - Sister skills for authoring from scratch: `author-informative-trail` (canonical), `author-investigation-trail` (exploratory)
-- Sister skill for publishing to web-ade: `publish-trail`
+- Publishing to web-ade: from the Principal app UI
 - Upgrade context: `web-ade/docs/file-city-trail-panel-0.5.81-upgrade.md`
 - Schema source: `industry-themed-file-city-panels/src/types/Trail.ts`

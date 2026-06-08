@@ -176,7 +176,7 @@ file, pick the tight line window), then route by bucket:
 
 | Bucket | Author with |
 | --- | --- |
-| ONE TRAIL — informative | `author-informative-trail` (in-app) / `author-local-informative-trail` (no app) |
+| ONE TRAIL — informative | `author-informative-trail` (in-app) |
 | ONE TRAIL — investigation | `author-investigation-trail` / `author-local-investigation-trail` |
 | TOPIC + trails | author each flow as a trail, then `create-topic` to group them |
 | TOPIC — intent only | `create-topic`; no trail until the code lands |

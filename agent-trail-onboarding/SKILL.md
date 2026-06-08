@@ -1,6 +1,6 @@
 ---
 name: agent-trail-onboarding
-description: Explain Principal trails and topics to a user who is new to the system or unsure which surface they need — what a trail is, what a topic is, shared (web-ade) vs local trails, that there is a `principal-ai` CLI for agent-side work, that trails and topics are gated by GitHub repo permissions by default, and that there is an optional desktop app for richer File City visualization (the CLI also ships with a minimal Electrobun UI for users who don't want the full app). Read-only conceptual onboarding; ends by pointing at the right action skill. Use when the user says "what's a trail?", "what's a topic?", "what's the difference between a shared trail and a local trail?", "do I need the app?", "is there a CLI?", "how do permissions work?", "I'm new to this — where do I start?", "help me pick the right skill", "what can I do with Principal?", or invokes /agent-trail-onboarding. NOT for actually authoring, publishing, or fetching anything — explain, then hand off to author-*-trail, publish-trail, create-topic, discover-trails, or file-city-trail-review.
+description: Explain Principal trails and topics to a user who is new to the system or unsure which surface they need — what a trail is, what a topic is, shared (web-ade) vs local trails, that there is a `principal-ai` CLI for agent-side work, that trails and topics are gated by GitHub repo permissions by default, and that there is an optional desktop app for richer File City visualization (the CLI also ships with a minimal Electrobun UI for users who don't want the full app). Read-only conceptual onboarding; ends by pointing at the right action skill. Use when the user says "what's a trail?", "what's a topic?", "what's the difference between a shared trail and a local trail?", "do I need the app?", "is there a CLI?", "how do permissions work?", "I'm new to this — where do I start?", "help me pick the right skill", "what can I do with Principal?", or invokes /agent-trail-onboarding. NOT for actually authoring, publishing, or fetching anything — explain, then hand off to author-*-trail, create-topic, discover-trails, or file-city-trail-review.
 ---
 
 # Agent Trail Onboarding
@@ -59,10 +59,10 @@ This is the distinction that confuses users most.
 | Who can see it | Anyone with the link **plus** read access to the underlying repo | Only the user (and whoever they hand the file to) |
 | Auth needed | GitHub token (`gh auth token` or git credential helper) | None |
 | Best for | Sharing with teammates, comparing across repos via a topic | Onboarding yourself, scratch investigations, working offline |
-| How to author | `author-informative-trail` / `author-investigation-trail` (in-app) **or** `publish-trail` (CLI-only, no app) | `author-local-informative-trail` / `author-local-investigation-trail` |
+| How to author | `author-informative-trail` / `author-investigation-trail` (in-app), then publish from the app UI | `author-local-investigation-trail` |
 
-A **local trail can be promoted to a shared trail** later via
-`publish-trail`. The reverse doesn't really happen — once published,
+A **local trail can be promoted to a shared trail** later by publishing it
+from the Principal app UI. The reverse doesn't really happen — once published,
 the trail's home is web-ade.
 
 ## Tooling: app vs CLI vs minimal UI
@@ -78,8 +78,9 @@ the user is working.
    `author-investigation-trail`, `convert-investigation`,
    `file-city-trail-review`, `document-notes`.
 
-2. **The `principal-ai` CLI.** Lets an agent author, publish, curate,
-   and discover trails from the terminal — no app required. Resolves
+2. **The `principal-ai` CLI.** Lets an agent author, curate,
+   and discover trails from the terminal — no app required. Publishing
+   to web-ade is done from the app UI, not the agent CLI. Resolves
    the user's GitHub token from `gh auth token` first, then falls back
    to `git credential fill` for `github.com`. Runs via npx so nothing
    has to be installed up front:
@@ -88,8 +89,7 @@ the user is working.
    npx -y @principal-ai/principal-view-cli@latest trail --help
    ```
 
-   Skills that use it: `publish-trail`, `create-topic`,
-   `discover-trails`, `author-local-informative-trail`,
+   Skills that use it: `create-topic`, `discover-trails`,
    `author-local-investigation-trail`.
 
 3. **The minimal Electrobun viewer that ships alongside the CLI.**
@@ -144,8 +144,8 @@ Once the user knows what they want, route them. Don't keep explaining.
 |---|---|
 | Author a durable, canonical trail (in the desktop app) | `author-informative-trail` |
 | Lay an exploratory trail as they figure something out (in the app) | `author-investigation-trail` |
-| Same as above, but locally without the app | `author-local-informative-trail` / `author-local-investigation-trail` |
-| Publish a local trail to web-ade as a shareable link | `publish-trail` |
+| Same as above, but locally without the app | `author-local-investigation-trail` |
+| Publish a local trail to web-ade as a shareable link | the Principal app UI |
 | Curate a topic from existing trails | `create-topic` |
 | Browse / list / fetch existing trails or topics | `discover-trails` |
 | Walk through a PR or branch diff visually | `file-city-trail-review` |

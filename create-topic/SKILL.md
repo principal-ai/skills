@@ -1,6 +1,6 @@
 ---
 name: create-topic
-description: Create a topic on web-ade — a curated collection of trails on a shared subject, e.g. "how do these three agent CLIs detect filesystem changes?" — and share it as a https://app.principal-ade.com/topic/<id> link. Topics group existing trails (by id or URL) into a single page so readers can compare implementations across repos. Use when the user says "create a topic", "make a topic out of these trails", "group these trails into a topic", "curate a topic on X", or invokes /create-topic. Posts via the `principal-ai` CLI using the user's GitHub token (resolved locally from `gh auth token` or git credential helper). NOT for authoring a single trail — use publish-trail (no-app) or author-{investigation,informative}-trail (in-app). NOT for editing a topic that already exists — use the topic's owner UI on web-ade or call the routes directly.
+description: Create a topic on web-ade — a curated collection of trails on a shared subject, e.g. "how do these three agent CLIs detect filesystem changes?" — and share it as a https://app.principal-ade.com/topic/<id> link. Topics group existing trails (by id or URL) into a single page so readers can compare implementations across repos. Use when the user says "create a topic", "make a topic out of these trails", "group these trails into a topic", "curate a topic on X", or invokes /create-topic. Posts via the `principal-ai` CLI using the user's GitHub token (resolved locally from `gh auth token` or git credential helper). NOT for authoring a single trail — use author-{investigation,informative}-trail (in-app), then publish from the Principal app UI. NOT for editing a topic that already exists — use the topic's owner UI on web-ade or call the routes directly.
 ---
 
 # Create Topic
@@ -29,9 +29,8 @@ Fire on phrases like:
 
 Don't fire when:
 
-- The user wants to **author a single trail** — use `publish-trail`
-  (no-app, share-only) or `author-investigation-trail` /
-  `author-informative-trail` (in-app authoring).
+- The user wants to **author a single trail** — use `author-investigation-trail` /
+  `author-informative-trail` (in-app authoring), then publish from the app UI.
 - The user wants to **edit a topic that already exists** — the
   owner-only edit affordances live on `https://app.principal-ade.com/topic/<id>`.
   For trail add/remove from a script use the
@@ -54,7 +53,7 @@ What the user *does* need:
   2. `git credential fill` for `github.com` — Keychain / Credential Manager
      fallback.
 - The trails they want to embed must already exist on web-ade (so they
-  resolve via `trails/_by-id/<id>.json`). Use `publish-trail` first if
+  resolve via `trails/_by-id/<id>.json`). Publish them from the app UI first if
   any of the trails are still local-only.
 
 The user does **not** need:
@@ -196,8 +195,8 @@ The topic page numbers them; that ordering is editorial, not arbitrary.
 
 ## What this skill doesn't do
 
-- It doesn't **author trails** — it only curates existing ones. Use
-  `publish-trail` (no-app) or the in-app authoring skills first.
+- It doesn't **author trails** — it only curates existing ones. Author with
+  the in-app authoring skills and publish from the app UI first.
 - It doesn't **edit titles / descriptions** after creation — use the
   owner UI on `https://app.principal-ade.com/topic/<id>` or `PATCH
   /api/topics/by-id/<id>` directly.

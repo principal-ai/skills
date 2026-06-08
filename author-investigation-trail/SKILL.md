@@ -429,7 +429,7 @@ Multi-repo trails activate one panel per registered repo when broadcast.
 - Sister skill for the canonical / durable version of a trail: `author-informative-trail`
 - Fork this investigation into a clean informative trail with a `derivedFrom` link: `convert-investigation`
 - Sister skill for PR diff walkthroughs: `file-city-trail-review`
-- Sister skill for publishing to web-ade: `publish-trail`
+- Publishing to web-ade: from the Principal app UI
 - Sister skill for local-only authoring + viewer (no electron-app required): `author-local-investigation-trail`
 - Schema source: `industry-themed-file-city-panels/src/types/Trail.ts`
 - Design doc: `industry-themed-file-city-panels/docs/TRAIL_DESIGN.md`

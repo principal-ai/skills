@@ -39,7 +39,7 @@ Don't fire when the user wants to:
   *published* topic and trail add/remove/reorder go through the owner UI on
   `https://app.principal-ade.com/topic/<id>` or the web-ade routes. This skill
   only edits the **description** of the local topic over the bridge.
-- **Author a trail** — use the `author-*` / `publish-trail` skills.
+- **Author a trail** — use the `author-*` skills (publish from the app UI).
 
 ## Prerequisites
 

@@ -23,10 +23,10 @@ Fire on phrases like:
 Don't fire when:
 
 - The user wants to **explore / investigate** a flow as they figure it out — that's `author-investigation-trail`.
-- The user wants to author + view the trail **locally** in the standalone trail viewer (no electron-app) — that's `author-local-informative-trail`.
+- The user wants to author + view the trail **locally** in the standalone trail viewer (no electron-app) — that's `author-local-investigation-trail` (local authoring is investigation-flavor only).
 - The user has an existing investigation trail and wants to **convert** it — that's `convert-investigation`.
 - The user wants a **PR diff walkthrough** — that's `file-city-trail-review`.
-- The user wants to **publish to web-ade** as a shareable link — that's `publish-trail`. Authoring locally first and publishing later is fine; this skill handles the authoring half.
+- The user wants to **publish to web-ade** as a shareable link — publish from the Principal app UI. Authoring first and publishing later is fine; this skill handles the authoring half.
 
 ## Prerequisites
 
@@ -292,7 +292,7 @@ Run through this list. If any answer is "no" or "not sure," fix it before postin
 - **Not narrating the discovery.** No *"I noticed…"*, no *"after tracing through…"*, no *"the bug was…"*. The trail does not reference itself or its author.
 - **Not capturing every related file.** Density matters more than coverage. A 6-marker trail that hits the load-bearing decisions beats a 14-marker trail that includes every file the flow touches.
 - **Not setting `kind: 'subject'` on any marker.** That's an investigation-only concept for marking the destination during exploration. Informative trails lead with the answer instead.
-- **Not publishing.** This skill writes to the local library and broadcasts to the running app. To share publicly, follow up with `publish-trail` once the trail is good.
+- **Not publishing.** This skill writes to the local library and broadcasts to the running app. To share publicly, publish from the app UI once the trail is good.
 - **Not emitting `notes`.** Notes are renderer-authored only and the route strips them on POST.
 
 ## Path discipline
@@ -375,7 +375,7 @@ When updating an existing trail, prefer re-POSTing with the same `id` over delet
 
 - Sister skill for the exploratory version (lay markers as you figure things out): `author-investigation-trail`
 - Forking an existing investigation into an informative trail with a `derivedFrom` link: `convert-investigation`
-- Publishing a finished informative trail to web-ade: `publish-trail`
-- Local-only authoring + viewer loop (no electron-app required): `author-local-informative-trail`
+- Publishing a finished informative trail to web-ade: from the Principal app UI
+- Local-only authoring + viewer loop (no electron-app required): `author-local-investigation-trail`
 - PR diff walkthroughs: `file-city-trail-review`
 - Schema source: `industry-themed-file-city-panels/src/types/Trail.ts`
