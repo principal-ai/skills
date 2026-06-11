@@ -26,7 +26,7 @@ Don't fire when the user wants:
 
 ## Prerequisites
 
-The electron-app must be running. Endpoints live on the **production** Principal MCP Bridge port:
+The electron-app must be running. Endpoints live on the Principal MCP Bridge port:
 
 ```
 http://localhost:3044
@@ -116,7 +116,7 @@ When summarizing notes for the user, surface `metadata.body` and `metadata.autho
   "anchor": {
     "exact": "Today, payloads delivered to localhost",
     "prefix": "Background\n\n",
-    "suffix": ":3054 are persisted in"
+    "suffix": ":3044 are persisted in"
   },
   "body": "Worth noting: this section predates the cap-eviction logic added in 0.5.49.",
   "author": "Claude (claude-opus-4-7)"
@@ -202,7 +202,7 @@ The server fills `author` from `git config user.name` / `user.email` when the fi
 
 | Symptom | Likely cause |
 |---|---|
-| `curl: (7) Failed to connect to localhost port 3044` | App isn't running, or it's on dev port 3054. This skill targets prod only — confirm with the user. |
+| `curl: (7) Failed to connect to localhost port 3044` | App isn't running. |
 | `400` with `relativeFilePath is required` | Forgot the field, or sent `repositoryPath` without `relativeFilePath`. |
 | `400` with `body must be a non-empty string` | Body is empty / missing. PATCH allows empty strings; POST does not. |
 | `400` with `anchor.exact must be a non-empty string` | Anchor missing or `exact` empty. |

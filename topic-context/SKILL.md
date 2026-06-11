@@ -46,8 +46,7 @@ Don't fire when the user wants to:
 The electron-app must be running. The bridge listens on:
 
 ```
-http://localhost:3044   # production app
-http://localhost:3054   # dev server (npm run dev)
+http://localhost:3044
 ```
 
 The agent brief hardcodes `3044`. Confirm the bridge is up before any call:
@@ -56,9 +55,7 @@ The agent brief hardcodes `3044`. Confirm the bridge is up before any call:
 curl -s http://localhost:3044/health   # → {"status":"ok",...,"port":3044}
 ```
 
-If that fails and the user is running the dev build, try `3054`. If neither
-answers, ask the user to launch the app rather than guessing other ports. Use
-whichever port answered for **every** call in the session — don't mix.
+If that fails, ask the user to launch the app rather than guessing other ports.
 
 No GitHub token is needed: the bridge is local and unauthenticated. (That's
 also why it's append/section only — see "Why no full replace?" below.)
@@ -227,7 +224,7 @@ Full-document edits stay a human action in the UI. Work within that grain.
 
 | Symptom | Likely cause |
 |---|---|
-| `curl: (7) Failed to connect to localhost port 3044` | App not running, or it's the dev build on `3054`. Confirm with `/health`. |
+| `curl: (7) Failed to connect to localhost port 3044` | App isn't running. |
 | `404 unknown topic id` | The id isn't in the local registry. It may be a remote-only topic — this skill is local-bridge only. |
 | `400 text (non-empty string) is required` | `append` body missing/empty `text`. |
 | `400 heading (non-empty string) is required` | `section` body missing/empty `heading`. |

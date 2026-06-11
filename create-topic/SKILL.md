@@ -41,19 +41,16 @@ Don't fire when the user wants to:
 The electron-app must be running. The bridge listens on:
 
 ```
-http://localhost:3044   # production app
-http://localhost:3054   # dev server (npm run dev)
+http://localhost:3044
 ```
 
-Confirm the bridge is up before any call, and use whichever port answered for
-**every** call in the session — don't mix:
+Confirm the bridge is up before any call:
 
 ```bash
 curl -s http://localhost:3044/health   # → {"status":"ok",...,"port":3044}
 ```
 
-If that fails and the user is running the dev build, try `3054`. If neither
-answers, ask the user to launch the app rather than guessing other ports.
+If that fails, ask the user to launch the app rather than guessing other ports.
 
 No GitHub token is needed: the bridge is local and unauthenticated. (Web-ade
 publishing — which *does* need auth — happens later, from the app UI.)
@@ -217,7 +214,7 @@ Good (axis stated):
 
 | Symptom | Likely cause |
 |---|---|
-| `curl: (7) Failed to connect to localhost port 3044` | App not running, or it's the dev build on `3054`. Confirm with `/health`. |
+| `curl: (7) Failed to connect to localhost port 3044` | App isn't running. |
 | `400 title (non-empty string) is required` | Missing/empty `title` in the body. |
 | `400 trailIds must be an array of strings` | `trailIds` passed as something other than a string array. |
 | Response shows a trail with `missing: true` | A passed `trailId` isn't in the local library — wrong id, or the trail was never authored/saved locally. |

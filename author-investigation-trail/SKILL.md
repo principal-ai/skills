@@ -32,7 +32,7 @@ Don't fire when:
 
 ## Prerequisites
 
-The electron-app must be running. Endpoints live on the **production** Principal MCP Bridge port:
+The electron-app must be running. Endpoints live on the Principal MCP Bridge port:
 
 ```
 http://localhost:3044
@@ -409,7 +409,7 @@ Multi-repo trails activate one panel per registered repo when broadcast.
 
 | Symptom | Likely cause |
 |---|---|
-| `curl: (7) Failed to connect to localhost port 3044` | App isn't running, or it's bound to dev port 3054. This skill targets prod only — confirm with the user. |
+| `curl: (7) Failed to connect to localhost port 3044` | App isn't running. |
 | `400` with `markers must be a non-empty array` | Forgot to populate `markers` or sent `events` (sequence-diagram terminology — wrong field). |
 | `400` with `views must be a non-empty array` | Forgot the view block. v1 trails always need `views: [{ kind: 'sequence', ... }]`. |
 | `400` with `sequence view: unknown markerId` | A `views[0].markers[].markerId` doesn't appear in `payload.markers[].id`. Common after renaming ids late. |

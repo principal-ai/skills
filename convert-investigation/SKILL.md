@@ -27,7 +27,7 @@ Don't fire when:
 
 ## Prerequisites
 
-The electron-app must be running. Endpoints live on the **production** Principal MCP Bridge port:
+The electron-app must be running. Endpoints live on the Principal MCP Bridge port:
 
 ```
 http://localhost:3044
