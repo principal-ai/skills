@@ -1,9 +1,16 @@
 ---
 name: document-notes
-description: Read or write user-authored notes anchored to specific text inside a markdown document. Notes live on the running electron-app's Principal MCP Bridge and surface as inline highlights in the MarkdownPanel. Use when the user says "what notes are on X.md", "list my notes for this doc", "leave a note on Y that says…", "what did I write about…", or invokes /document-notes. NOT for creating sequence-diagram annotations — use file-city-sequence for those.
+description: Work with a markdown document in the running electron-app over the Principal MCP Bridge — (1) read/write user-authored notes anchored to specific text, surfacing as inline highlights in the MarkdownPanel, and (2) open a document into the focused window as a tab. Both address a { repositoryPath, filePath } doc. Use when the user says "what notes are on X.md", "list my notes for this doc", "leave a note on Y that says…", "what did I write about…", "open / pull up X.md in the app", or invokes /document-notes. NOT for creating sequence-diagram annotations — use file-city-sequence for those.
 ---
 
-# Document Notes
+# Documents — notes & open
+
+This skill covers two operations on a markdown document in the running electron-app, both spoken over the Principal MCP Bridge and both addressing a `{ repositoryPath, filePath }` doc:
+
+1. **Notes** — read/write user-authored annotations anchored to a span of text (most of this skill).
+2. **Open** — pop a document open as a tab in whatever app window is currently focused (see [Open a document in the app](#open-a-document-in-the-app)).
+
+They pair naturally: an agent can attach a note to a passage and then open the doc so the user sees the highlight right away. Most of this skill is about notes; the open operation is a single section below.
 
 User-authored notes anchored to a span of text inside a markdown file. Each note has a W3C text-quote anchor (`exact` text plus optional `prefix`/`suffix` for disambiguation) and a markdown `body`. Notes are stored on disk under the electron-app's `userData/document-notes/` and exposed over HTTP through the Principal MCP Bridge so agents can read what the user has flagged or attach commentary that will show up the next time the user opens the doc.
 
@@ -17,6 +24,7 @@ Fire on phrases like:
 - "annotate this section with…"
 - "what did I write about `<X>` in the docs"
 - "list every doc I've taken notes on"
+- "open / pull up / show me `<file>` in the app" → the [Open](#open-a-document-in-the-app) operation
 - explicit `/document-notes` invocation
 
 Don't fire when the user wants:
@@ -35,6 +43,29 @@ http://localhost:3044
 Confirm with `curl -s http://localhost:3044/health` before any call. If it's down, ask the user to launch the app rather than guessing other ports.
 
 The user does not need to have the markdown panel open to read or write — notes are persisted server-side. They'll appear as inline highlights the next time they open the doc.
+
+## Open a document in the app
+
+Pop a markdown document open as a tab in the running app. Unlike notes (which are persisted and surface *later*), this acts on the live UI *now*.
+
+```bash
+curl -s -X POST http://localhost:3044/api/document/open \
+  -H 'content-type: application/json' \
+  -d '{"filePath":"<absolute-path-or-repo-relative>","repositoryPath":"<absolute-repo-root>"}'
+```
+
+- `filePath` — **required**. Absolute, or repo-relative when `repositoryPath` is given (resolved against the registered repo).
+- `repositoryPath` — optional; resolves a relative `filePath` and gives the tab its repo context.
+- Response: `{ success, windowOpened }`.
+
+### How it routes — and the focus caveat
+
+The doc opens in **whichever app window is currently focused**, *if* that window is a doc-capable surface: the principal window's **Inbox** or **Projects** views, a **dev-workspace** window, or an **Alexandria-workspace** window. It opens as a markdown tab next to that window's terminal. There is no cold-start — the route only targets an already-open, already-focused window (a warm push); it never spawns one.
+
+Two consequences to plan around:
+
+- **`windowOpened: false` is a normal, successful outcome**, not an error. It means no focused window could take the doc — either nothing was focused, the focused window isn't doc-capable, or (within the principal window) the active view is a non-terminal one (Settings, Auth…). The HTTP call still returns `success: true`.
+- **The Electron app must be frontmost.** Focus is resolved with `BrowserWindow.getFocusedWindow()`, which only returns a window when the app itself is the active OS application. Firing this from a terminal that holds focus yields `windowOpened: false`. So: open this for the user while *they* are working in the app, not as a fire-and-forget from a backgrounded shell. If you need to confirm it landed, ask the user whether the tab appeared rather than trusting `windowOpened` alone.
 
 ## Anchor model — text-quote selectors
 
@@ -57,7 +88,7 @@ Picking a good anchor:
 
 Before posting, `Read` the markdown file (or `cat` it). Locate the exact substring the user wants annotated, copy it verbatim into `exact`, and grab the surrounding text for `prefix`/`suffix`. Don't paraphrase — the anchor must match the live document character-for-character.
 
-## Endpoints
+## Notes endpoints
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -215,6 +246,8 @@ The server fills `author` from `git config user.name` / `user.email` when the fi
 
 - Sister skill for runtime/architecture flows: `file-city-sequence`
 - Sister skill for PR diff walkthroughs: `file-city-review`
-- Persistence implementation: `electron-app/src/main/document-notes/documentNotesPersistence.ts`
-- HTTP routes: `electron-app/src/main/document-notes/documentNotesRoutes.ts`
+- Notes persistence implementation: `electron-app/src/main/document-notes/documentNotesPersistence.ts`
+- Notes HTTP routes: `electron-app/src/main/document-notes/documentNotesRoutes.ts`
+- Open-document HTTP route: `electron-app/src/main/principal-mcp/documentRoutes.ts`
+- Open-document renderer wiring: `electron-app/src/renderer/services/DocumentService.ts` (+ the Inbox/Projects/dev-workspace/alexandria-workspace frameworks that listen on it)
 - Panel wiring: `electron-app/src/renderer/panels/markdown-panel/MarkdownPanel.tsx`
