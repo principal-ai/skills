@@ -1,6 +1,6 @@
 ---
 name: topic-context
-description: Read the topic an agent was briefed on and keep its description current as work progresses — fetch the topic + its trails from the local Principal MCP Bridge, append discovered context, or replace one ## / ### section of the description in place (e.g. update a status block). Use when you were handed a "Fetch http://localhost:3044/api/topics/<id> to begin working on topic …" brief, or when the user says "update the topic", "mark this section done on the topic", "leave context on the topic", "fix the status on the topic", "what's this topic about". The description is editable over the bridge via append (grow) and section upsert (replace-in-place). NOT for creating a topic — use create-topic (local-bridge create). NOT for browsing topics a user published — use discover-trails. NOT for editing a topic's title or trail list — those go through the owner UI or web-ade routes.
+description: Read the topic an agent was briefed on and keep its description current as work progresses — list/search local topics, fetch a topic + its trails from the local Principal MCP Bridge, append discovered context, or replace one ## / ### section of the description in place (e.g. update a status block). Use when you were handed a "Fetch http://localhost:3044/api/topics/<id> to begin working on topic …" brief, or when the user says "update the topic", "mark this section done on the topic", "leave context on the topic", "fix the status on the topic", "what's this topic about", "what topics are there", "find the topic about X". Topics can be listed/filtered via GET /api/topics?q=…; the description is editable over the bridge via append (grow) and section upsert (replace-in-place). NOT for creating a topic — use create-topic (local-bridge create). NOT for browsing topics a user published — use discover-trails. NOT for editing a topic's title or trail list — those go through the owner UI or web-ade routes.
 ---
 
 # Topic Context
@@ -24,6 +24,9 @@ Fire on phrases / situations like:
 - You were handed a brief: `Fetch http://localhost:3044/api/topics/<id> to
   begin working on topic "…"`. Reading it is the first move; updating it as
   you finish is the last.
+- "what topics are there?" / "find the topic about X" / "which topic was I
+  working on?" — list/search them with `GET /api/topics` (see "Finding a
+  topic").
 - "update the topic" / "update the topic description"
 - "mark the status section done on the topic" / "fix the status on the topic"
 - "leave context on the topic for the next person"
@@ -64,6 +67,7 @@ also why it's append/section only — see "Why no full replace?" below.)
 
 | Method | Path | Purpose |
 |---|---|---|
+| `GET` | `/api/topics` | List/search local topics (directory, no trails). Supports `?q=` substring filter. Returns `{ success, topics, count }`. |
 | `GET` | `/api/topics/:id` | Read the topic + its trails. Returns `{ success, topic, trails }`. |
 | `POST` | `/api/topics/:id/description/append` | Append a paragraph to the description. Body: `{ text }`. |
 | `POST` | `/api/topics/:id/description/section` | Replace one `##`/`###` section in place, or append it if absent. Body: `{ heading, body, level? }`. |
@@ -98,6 +102,42 @@ also returns `action: "replaced" | "inserted"`).
 
 `missing: true` means the topic remembers a trail id that's been deleted
 locally — surface the dangling reference rather than pretending it's gone.
+
+## Finding a topic (when you weren't handed an id)
+
+If you have an id (from a brief, or from the user), skip to the next section.
+When you *don't* — "what topics are there?", "find the topic about X", "which
+topic was I working on?" — list them over the bridge. `GET /api/topics` is a
+**directory**: it returns lightweight summaries (no description body, no trail
+resolution), newest-updated first, and takes an optional `?q=` case-insensitive
+substring filter over title + description.
+
+```bash
+curl -s http://localhost:3044/api/topics | jq '.topics[] | {id, title, trailCount, state, updatedAt}'
+curl -s "http://localhost:3044/api/topics?q=storage" | jq '.topics[] | {id, title, descriptionPreview}'
+```
+
+Each entry:
+
+```ts
+{
+  topics: Array<{
+    id: string;
+    href: string;               // /api/topics/<id> — GET this for the full topic + trails
+    title: string;
+    descriptionPreview: string; // first ~200 chars of the description, single-lined
+    trailCount: number;
+    state?: string;             // topic status, e.g. 'working'
+    createdAt: string;
+    updatedAt: string;          // entries sorted by this, descending
+  }>,
+  count: number
+}
+```
+
+Pick the id, then GET `/api/topics/:id` for the real brief — the list never
+carries the full description or the trails. This is local-bridge discovery; for
+topics a user *published* to web-ade, use `discover-trails` instead.
 
 ## Reading the brief (always do this first)
 
