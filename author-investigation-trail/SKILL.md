@@ -186,6 +186,8 @@ Set `payload.summary` to a markdown overview of the flow — what triggers it, w
 
 Investigation summaries are allowed to read as a question or hypothesis ("Why does the WorkOS callback silently redirect-loop on Safari?") rather than a statement. When the investigation reaches an answer, the title and summary can be tightened in place, or the trail can be converted to informative for the canonical statement.
 
+**Offer the user title options before POSTing.** The title is the most visible part of the trail, and the right framing often depends on audience context only the user has. Once you have a working title, present **2–4 candidate titles** via `AskUserQuestion` and let the user pick, edit, or supply their own — investigation titles may stay exploratory (a question or hypothesis is fine), but keep each to **~140 characters or fewer**; detail beyond that belongs in the summary. Skip the prompt only when the user already handed you an explicit title; when they later ask to change it, treat that as a fresh round of options unless they dictate the exact wording.
+
 **Formatting rules** (the summary renders inside a narrow floating overlay; structural markdown breaks the layout):
 
 - **Paragraph breaks between sentences.** A 3-sentence wall is still a wall in a narrow overlay; three short blocks are scannable. Put each sentence (or each logical beat) on its own paragraph separated by a blank line (`\n\n` in JSON). Don't use single trailing newlines (`\n`) — markdown collapses them into spaces and you get the wall back.
