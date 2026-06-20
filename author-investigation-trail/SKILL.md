@@ -46,10 +46,23 @@ The user must have the File City panel open on the repo whose paths your `source
 
 Trails split content from layout:
 
-- **Markers** carry the *content* — `id`, `sourcePath`, `snippet`, `description`. View-agnostic.
+- **Markers** carry the *content* — `id`, `sourcePath`, `snippet`, `description`. View-agnostic in *shape*, but **the array order is itself meaningful** (see below).
 - **Views** carry the *structure* — for v1 always ship `views: [{ kind: 'sequence', markers: [...], edges: [...] }]`. The sequence view block names which markers participate and how they're laid out (lanes, edges).
 
 Why split? The trail medium is designed to grow sibling renderers (linear, graph, tree) without changing marker content. v1 only registers the sequence renderer; ship a single sequence view.
+
+> **Order lives in TWO places — keep them in sync.** The panel renders a trail
+> two ways at once, each ordered by a *different* array:
+> - The **sequence diagram** (swimlanes) orders by `views[0].markers` + `edges` +
+>   `layout.laneOrder`.
+> - The **brief stepper / carousel** (the numbered stops a reader clicks through)
+>   orders by the **top-level `payload.markers[]` array**, in array order.
+>
+> So `payload.markers` order is *not* cosmetic — it is the linear reading order.
+> When you reorder a trail, reorder **both** `payload.markers` and
+> `views[0].markers`/`edges`, or the stepper and the diagram disagree and a
+> re-POST "looks like it didn't update." Default: list `payload.markers` in the
+> exact order you want them read, and mirror that order in the view.
 
 Repos: trails carry portable identity, not filesystem paths. For the common single-repo case, ship `authoredAt: { sha, ref }` and omit `repos[]`. The producer machine's filesystem path is sent on the request body as a top-level `repositoryPath` field — separate from the payload — so the host can bucket the broadcast and open the right window.
 
