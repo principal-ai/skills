@@ -7,6 +7,13 @@
   "prerequisites": [
     "Basic understanding of [technology stack]"
   ],
+  "repos": [
+    {
+      "id": "pkg:github/OWNER/REPO",
+      "name": "REPO",
+      "remote": { "host": "github", "owner": "OWNER", "name": "REPO" }
+    }
+  ],
   "steps": [
     {
       "id": "what-is-it",

@@ -4,6 +4,13 @@
   "description": "Understand the architectural patterns that make [Your Project] work - [pattern 1], [pattern 2], and [pattern 3]",
   "version": "1.0.0",
   "audience": "Engineers & Architects",
+  "repos": [
+    {
+      "id": "pkg:github/OWNER/REPO",
+      "name": "REPO",
+      "remote": { "host": "github", "owner": "OWNER", "name": "REPO" }
+    }
+  ],
   "steps": [
     {
       "id": "core-pattern-1",

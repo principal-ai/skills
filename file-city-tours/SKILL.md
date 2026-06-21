@@ -1,6 +1,6 @@
 ---
 name: file-city-tours
-description: Create and validate introduction tours for File City visualizations. Use when users want to (1) create onboarding tours for codebases, (2) build guided walkthroughs highlighting architecture, (3) validate existing tour files, (4) fix tour validation errors, or (5) customize tours with highlights, interactive actions, and color modes.
+description: Create, validate, preview, and publish introduction tours for File City visualizations. Use when users want to (1) create onboarding tours for codebases, (2) build guided walkthroughs highlighting architecture, (3) validate or fix tour files, (4) preview a tour locally in the viewer, or (5) publish/fetch tours from the store. Tours require a `repos` field and are published (not committed to the repo root).
 license: MIT
 ---
 
@@ -15,11 +15,22 @@ Create guided introduction tours that help users navigate and understand codebas
 Tour authoring lives under the Principal CLI's `tour` subcommand. Use `npx` to run `@principal-ai/principal-view-cli@latest tour …` without installing globally:
 
 ```bash
-# Create a new tour from template
+# Create a new tour from template (stamps `repos` from the cwd git remote)
 npx @principal-ai/principal-view-cli@latest tour init --template onboarding
 
 # Validate a tour file
 npx @principal-ai/principal-view-cli@latest tour validate my-tour.tour.json
+
+# Preview it locally in the File City viewer (run from a checkout of the repo,
+# or pass --repo-root <path>)
+npx @principal-ai/principal-view-cli@latest tour view my-tour.tour.json
+
+# Publish it to the store; prints a share URL with the minted tour id
+npx @principal-ai/principal-view-cli@latest tour publish my-tour.tour.json
+
+# Fetch / open a published tour by id or URL
+npx @principal-ai/principal-view-cli@latest tour fetch <id-or-url>
+npx @principal-ai/principal-view-cli@latest tour view <id-or-url>
 
 # Analyze timing/length against the authoring guidelines
 npx @principal-ai/principal-view-cli@latest tour stats my-tour.tour.json
@@ -27,7 +38,12 @@ npx @principal-ai/principal-view-cli@latest tour stats my-tour.tour.json
 # Available templates: minimal, onboarding, architecture
 ```
 
-**Note**: Using `npx` ensures you always run the latest version without needing to install the CLI globally.
+**Note**: `npx … @latest` runs the current CLI (≥ 0.30.0), which adds
+`view`/`publish`/`fetch` and requires the `repos` field (below).
+
+**Viewer**: `tour view` launches the standalone viewer, shipped as a macOS
+arm64 prebuild (the optional `@principal-ai/trail-viewer` dependency). On other
+platforms, pass `--viewer-dir <path>` pointing at a source checkout.
 
 ### Manual Creation
 
@@ -36,11 +52,16 @@ Use template files from `assets/` directory:
 - `onboarding-template.json` - Multi-step with highlights
 - `architecture-template.json` - Layered architecture showcase
 
+Each template carries a placeholder `repos` entry (`pkg:github/OWNER/REPO`) —
+replace `OWNER`/`REPO` with the real repository before validating or publishing.
+
 ## Tour Structure
 
-Tours are JSON files ending with `.tour.json` placed in repository root.
-
-**Important**: Only create **one tour per repository**. If multiple `.tour.json` files exist, only the first one alphabetically will be loaded.
+Tours are JSON files ending with `.tour.json`. They are **authored locally**,
+**previewed** in the viewer (`tour view`), and **published to the store**
+(`tour publish`) — they are no longer committed to the repo root or
+auto-discovered by a file scan. A repo can have many tours; each gets its own id
+when published, and is retrieved by id (`tour fetch` / `tour view <id>`).
 
 ### Minimal Structure
 
@@ -50,6 +71,13 @@ Tours are JSON files ending with `.tour.json` placed in repository root.
   "title": "Tour Title",
   "description": "What this covers",
   "version": "1.0.0",                 // semantic versioning
+  "repos": [                          // REQUIRED — which repo(s) the tour describes
+    {
+      "id": "pkg:github/owner/name",
+      "name": "name",
+      "remote": { "host": "github", "owner": "owner", "name": "name" }
+    }
+  ],
   "steps": [
     {
       "id": "step-1",                 // kebab-case
@@ -61,6 +89,32 @@ Tours are JSON files ending with `.tour.json` placed in repository root.
   ]
 }
 ```
+
+### Repos (required)
+
+A tour describes *directories* of a codebase, so it must name the repo(s) those
+directories belong to — that's how the viewer knows which working tree to build
+File City from, and how the store buckets and serves the tour.
+
+```json
+"repos": [
+  {
+    "id": "pkg:github/owner/name",                          // Purl (required)
+    "name": "name",                                          // short name (required)
+    "remote": { "host": "github", "owner": "owner", "name": "name" },  // optional
+    "roots": ["packages/cli"],                               // optional: scope to subtree(s)
+    "authoredAtSha": "<sha>"                                 // optional: provenance
+  }
+]
+```
+
+- `repos[0]` is the **primary** repo. The array supports **multi-repo** tours.
+- `roots` scopes the rendered city to specific subtree(s) — use it to keep very
+  large repos legible. Absent/empty = render the whole repo.
+- `tour init` and `tour publish` fill `repos` in for you (derived from the cwd
+  git remote). Hand-authored tours **must** include it, or validation fails.
+- Honoring `roots`/multi-repo in the 3D rendering is in progress; the field is
+  valid and stored today regardless.
 
 ## Tour Content Strategy
 
@@ -206,7 +260,7 @@ Common errors and fixes are in `references/troubleshooting.md`.
 5. **One concept per step** - Don't overwhelm, stay focused on a single idea
 
 ### Technical Guidelines
-6. **One tour per repository** - Create only a single `.tour.json` file
+6. **Set `repos`** - Required; let `tour init`/`publish` derive it from the git remote, or fill it by hand. A repo can have many tours (each published under its own id).
 7. **Target duration: 2 minutes ideal, 3 minutes max** - Keep tours concise and focused:
    - **4-6 steps** for 2-minute tours (ideal)
    - **6-8 steps maximum** for 3-minute tours
@@ -243,11 +297,12 @@ Common errors and fixes are in `references/troubleshooting.md`.
 
 ## Workflow
 
-1. **Create** - Use CLI or copy from `assets/` templates
+1. **Create** - `tour init`, or copy from `assets/` templates (then set `repos`)
 2. **Customize** - Edit tour steps for your codebase
-3. **Validate** - Run CLI validation
-4. **Test** - Place in repo root, open in File City
-5. **Iterate** - Refine based on user feedback
+3. **Validate** - `tour validate`
+4. **Preview** - `tour view <file>` from a checkout of the repo (or `--repo-root <path>`)
+5. **Publish** - `tour publish <file>` → share the printed URL / id
+6. **Iterate** - Refine based on feedback; re-publish
 
 ## Templates
 

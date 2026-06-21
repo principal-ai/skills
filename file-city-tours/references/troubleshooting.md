@@ -4,18 +4,22 @@ Common issues when creating and using File City tours.
 
 ## Tour Not Showing Up
 
-**Problem**: Tour file exists but doesn't appear in File City
+**Problem**: Tour doesn't render when you `tour view` it (locally or by id)
+
+Tours are no longer auto-discovered from the repository root. You author a tour file, preview it with `tour view`, and optionally publish it to share. If a tour won't show:
 
 **Solutions**:
-1. **Check filename**: Must end with `.tour.json` (e.g., `getting-started.tour.json`)
-2. **Check location**: Must be in repository root, not in subdirectories
-3. **Check JSON syntax**: Run validation to ensure valid JSON
-4. **Multiple tours**: Only the first alphabetically is loaded
-
-**Validation**:
-```bash
-npx @principal-ai/principal-view-cli@latest tour validate your-tour.tour.json
-```
+1. **Validate it**: Run validation to catch JSON syntax and schema errors
+   ```bash
+   npx @principal-ai/principal-view-cli@latest tour validate your-tour.tour.json
+   ```
+2. **Confirm `repos` is present and correct**: A tour requires at least one `TourRepoRef` in `repos`, each with `id` (e.g. `pkg:github/owner/name`) and `name`. Without it the tour has no codebase to render.
+3. **Point at the right checkout**: In local mode the viewer builds File City from a working tree. Make sure you run `tour view` from a checkout of the tour's repo, or pass `--repo-root <path>` at one:
+   ```bash
+   npx @principal-ai/principal-view-cli@latest tour view your-tour.tour.json --repo-root ../widgets
+   ```
+4. **For published tours**: Confirm `tour publish` succeeded and printed an id / share URL, then retrieve with `tour fetch <id>` or `tour view <id>`.
+5. **Viewer platform**: The bundled viewer is a macOS arm64 prebuild (`@principal-ai/trail-viewer`). On other platforms, pass `--viewer-dir <path>` to a source checkout of the viewer.
 
 ## Validation Errors
 
@@ -182,12 +186,12 @@ npx tour validate my-tour.tour.json
 - `typescript` - Type safety issues
 
 ### Test your tour
-1. Create the tour file
-2. Validate with CLI: `npx @principal-ai/principal-view-cli@latest tour validate`
-3. Place in repository root
-4. Open in File City
-5. Walk through each step
-6. Verify highlights and actions work
+1. Create the tour file (include `repos`)
+2. Validate with CLI: `npx @principal-ai/principal-view-cli@latest tour validate my-tour.tour.json`
+3. Preview locally: `npx @principal-ai/principal-view-cli@latest tour view my-tour.tour.json` (run from the repo checkout, or add `--repo-root <path>`)
+4. Walk through each step
+5. Verify highlights and actions work
+6. Share it: `npx @principal-ai/principal-view-cli@latest tour publish my-tour.tour.json`, then others use `tour fetch <id>` / `tour view <id>`
 
 ### Progressive disclosure
 - Start with overview (step 1)

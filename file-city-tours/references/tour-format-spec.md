@@ -18,6 +18,7 @@ Tours are defined as JSON files that match the `IntroductionTour` interface.
   "title": "Tour Title",
   "description": "Overview of what this tour covers",
   "version": "1.0.0",
+  "repos": [/* Array of TourRepoRef (at least 1 required) */],
   "audience": "beginner",
   "prerequisites": ["Required knowledge"],
   "steps": [/* Array of tour steps */],
@@ -35,6 +36,7 @@ Tours are defined as JSON files that match the `IntroductionTour` interface.
 | `title` | `string` | Human-readable tour title |
 | `description` | `string` | Brief overview of what the tour covers |
 | `version` | `string` | Semantic version (e.g., "1.0.0") |
+| `repos` | `TourRepoRef[]` | Repo(s) the tour's directories belong to (at least 1 required). `repos[0]` is the primary repo; additional entries make a multi-repo tour. |
 | `steps` | `IntroductionTourStep[]` | Array of tour steps (at least 1 required) |
 
 ### Optional Fields
@@ -58,6 +60,28 @@ Tours are defined as JSON files that match the `IntroductionTour` interface.
   }
 }
 ```
+
+## Repos
+
+A tour describes directories of a codebase, so it must name the repo(s) those directories belong to. The required top-level `repos` field is an array of `TourRepoRef` entries. `repos[0]` is the primary repo; supplying more than one entry makes the tour multi-repo.
+
+```json
+"repos": [
+  { "id": "pkg:github/acme/widgets", "name": "widgets", "remote": { "host": "github", "owner": "acme", "name": "widgets" }, "roots": ["packages/cli"] }
+]
+```
+
+### TourRepoRef Fields
+
+| Field | Type | Description | Default |
+|-------|------|-------------|---------|
+| `id` | `string` | Package URL identifying the repo, e.g. `pkg:github/owner/name` | **required** |
+| `name` | `string` | Short repo name, e.g. `Backlog.md` | **required** |
+| `remote` | `{ host, owner, name }` | Remote location. `host` is `"github" \| "gitlab" \| "bitbucket"` | - |
+| `roots` | `string[]` | Repo-relative subtree paths to scope the rendered city to | `[]` (whole repo) |
+| `authoredAtSha` | `string` | Commit SHA the tour was authored against | - |
+
+`roots` keeps very large repos legible by scoping the rendered city to specific subtrees; absent or empty means the whole repo is shown. The array form of `repos` supports multi-repo tours. (Viewer rendering of `roots` and multi-repo is future work, but the data is valid now.)
 
 ## Tour Steps
 
@@ -192,8 +216,9 @@ Resources provide links to additional documentation or context.
 
 1. ✅ `id` must be unique within the codebase
 2. ✅ `version` must follow semantic versioning (X.Y.Z)
-3. ✅ `steps` array must contain at least 1 step
-4. ✅ All step IDs must be unique within the tour
+3. ✅ `repos` must contain at least 1 `TourRepoRef`, each with `id` and `name`
+4. ✅ `steps` array must contain at least 1 step
+5. ✅ All step IDs must be unique within the tour
 
 ### Step-Level Validation
 
@@ -225,7 +250,7 @@ Resources provide links to additional documentation or context.
 1. **Target duration: 2 minutes ideal, 3 minutes maximum** - Keep tours concise and impactful:
    - **4-6 steps** for 2-minute tours (recommended)
    - **6-8 steps maximum** for 3-minute tours (absolute max)
-   - **One tour per repository** - Don't split into multiple tours
+   - **Keep each tour cohesive** - One subject per tour; don't sprawl across unrelated areas
    - **Test and time** - Walk through your tour and verify it fits within 3 minutes
 2. **Start broad, then narrow** - Begin with overview, then focus on specific areas
 3. **Estimate time accurately** - Use `estimatedTime` field, allocate 20-30 seconds per step
@@ -277,6 +302,9 @@ See [examples/introduction-example.tour.json](../examples/introduction-example.t
   "title": "Quick Start Guide",
   "description": "Get started with the codebase in 5 minutes",
   "version": "1.0.0",
+  "repos": [
+    { "id": "pkg:github/acme/widgets", "name": "widgets" }
+  ],
   "steps": [
     {
       "id": "step-1",
@@ -299,12 +327,17 @@ A JSON schema is available for validation tools:
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "IntroductionTour",
   "type": "object",
-  "required": ["id", "title", "description", "version", "steps"],
+  "required": ["id", "title", "description", "version", "repos", "steps"],
   "properties": {
     "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
     "title": { "type": "string", "minLength": 1 },
     "description": { "type": "string", "minLength": 1 },
     "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "repos": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/repo" }
+    },
     "audience": { "type": "string" },
     "prerequisites": { "type": "array", "items": { "type": "string" } },
     "steps": {
@@ -319,18 +352,18 @@ A JSON schema is available for validation tools:
 
 See [tour-schema.json](./tour-schema.json) for the complete schema definition.
 
-## CLI Tool Requirements
+## CLI Tool
 
-A CLI tool for generating and validating tours should support:
+Tours are authored, previewed, and shared with the published CLI, `@principal-ai/principal-view-cli@0.30.0` (run via `npx @principal-ai/principal-view-cli@latest tour …`).
 
 ### Commands
 
-1. **`tour validate <file>`** - Validate tour JSON against schema and rules
-2. **`tour create`** - Interactive tour creation wizard
-3. **`tour init`** - Initialize a new tour with template
-4. **`tour test <file>`** - Test tour in a File City instance
-5. **`tour lint <file>`** - Check for best practices violations
-6. **`tour stats <file>`** - Display tour statistics and timing analysis
+1. **`tour init`** - Initialize a new tour with a template
+2. **`tour validate <file>`** - Validate tour JSON against schema and rules
+3. **`tour stats <file>`** - Display tour statistics and timing analysis
+4. **`tour view <file|id>`** - Preview a tour locally, or view a published tour by id
+5. **`tour publish <file>`** - Publish a tour to the store; prints a share URL / mints an id
+6. **`tour fetch <id>`** - Retrieve a published tour by id
 
 ### Validation
 
@@ -398,51 +431,44 @@ Recommendations:
 - Suggestions for improvements
 - Preview mode showing what tour will look like
 
-## Automatic Tour Detection
+## Authoring, Viewing, and Publishing
 
-CodeCityPanel automatically detects and loads tours from your repository:
+Tours are authored locally and either viewed locally or published to a store (the same backing model as trails) and fetched by id. They are **not** committed to the repository root or auto-discovered by a file scan.
 
-1. **Place `*.tour.json` in repository root** - The file must end with `.tour.json` (e.g., `getting-started.tour.json`, `architecture.tour.json`)
-2. **File is auto-detected** - When the file tree loads, CodeCityPanel scans for files matching `*.tour.json`
-3. **Validation happens automatically** - The tour is parsed and validated on load
-4. **Tour button appears** - If a valid tour is found, a "Tour" button appears in the header
-5. **Click to start** - Users can click the button to begin the guided tour
+1. **Author a tour file locally** - Create a `*.tour.json` anywhere; it is not tied to a fixed location in the repo. Make sure `repos` names the repo(s) the tour's directories belong to.
 
-If multiple `.tour.json` files exist, the first one alphabetically will be loaded.
+2. **Preview it locally**:
+   ```bash
+   npx @principal-ai/principal-view-cli@latest tour view my-tour.tour.json
+   ```
+   In local mode the viewer builds File City from a working tree. It defaults to the current working directory; point it at a different checkout with `--repo-root <path>`:
+   ```bash
+   npx @principal-ai/principal-view-cli@latest tour view my-tour.tour.json --repo-root ../widgets
+   ```
 
-### Implementation Details
+3. **Publish it to share**:
+   ```bash
+   npx @principal-ai/principal-view-cli@latest tour publish my-tour.tour.json
+   ```
+   This mints an id and prints a share URL.
 
-The tour detection uses these utilities from `src/utils/tourParser.ts`:
+4. **Others retrieve it** by id:
+   ```bash
+   npx @principal-ai/principal-view-cli@latest tour fetch <id>
+   npx @principal-ai/principal-view-cli@latest tour view <id>
+   ```
 
-```typescript
-import { loadTourFromFileTree } from '../utils/tourParser';
+### Standalone Viewer
 
-// Automatically called when fileTree updates
-const tourResult = loadTourFromFileTree(fileTreeSlice.data);
-
-if (tourResult.success && tourResult.tour) {
-  // Tour is valid and ready to display
-  setTourData(tourResult.tour);
-}
-```
+The standalone viewer ships as a macOS arm64 prebuild (the optional dependency `@principal-ai/trail-viewer`). On other platforms, pass `--viewer-dir <path>` pointing at a source checkout of the viewer.
 
 ### Validation Errors
 
-If a `.tour.json` file exists but has validation errors, they will be logged to the console:
+Validation runs on `tour validate`, and again before `view`/`publish`. Errors are reported with a message such as:
 
 ```
 [Tour] Tour validation failed: Invalid 'version' - must be semantic version (e.g., '1.0.0')
 ```
-
-To see these errors, open your browser's developer console.
-
-### Testing Your Tour
-
-1. Add your `*.tour.json` file to your repository root (e.g., `my-tour.tour.json`)
-2. Open the repository in File City
-3. Check the console for validation errors
-4. If valid, click the "Tour" button in the header
-5. Navigate through your tour steps
 
 ## Related Documentation
 
@@ -453,4 +479,5 @@ To see these errors, open your browser's developer console.
 
 ## Version History
 
-- **1.0.0** (2026-02-03) - Initial format specification with automatic detection
+- **1.0.0** (2026-02-03) - Initial format specification
+- **2.0.0** (2026-06-20) - Required `repos` field added; tours authored/viewed/published via the CLI instead of git auto-discovery

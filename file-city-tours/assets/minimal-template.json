@@ -4,6 +4,13 @@
   "description": "Get started with the codebase in 5 minutes",
   "version": "1.0.0",
   "audience": "New Users & AI Assistants",
+  "repos": [
+    {
+      "id": "pkg:github/OWNER/REPO",
+      "name": "REPO",
+      "remote": { "host": "github", "owner": "OWNER", "name": "REPO" }
+    }
+  ],
   "steps": [
     {
       "id": "step-1-welcome",
