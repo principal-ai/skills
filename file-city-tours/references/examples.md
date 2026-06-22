@@ -108,7 +108,7 @@ Tour that teaches core concepts and how the system works (recommended approach):
             { "path": "packages/lexical/src/LexicalReconciler.ts", "type": "file" }
           ],
           "opacity": 0.8,
-          "renderStrategy": "border"
+          "renderStrategy": "fill"
         }
       ],
       "interactiveActions": [
@@ -167,7 +167,7 @@ Tour that teaches core concepts and how the system works (recommended approach):
             { "path": "packages/lexical-react/src/LexicalComposer.tsx", "type": "file" }
           ],
           "opacity": 0.8,
-          "renderStrategy": "border"
+          "renderStrategy": "fill"
         }
       ]
     }
@@ -253,7 +253,7 @@ Tour explaining core architectural patterns and how they're implemented:
             { "path": "packages/lexical/src/LexicalNode.ts", "type": "file" }
           ],
           "opacity": 0.8,
-          "renderStrategy": "border"
+          "renderStrategy": "fill"
         }
       ],
       "colorMode": "fileTypes",
@@ -283,7 +283,7 @@ Tour explaining core architectural patterns and how they're implemented:
             { "path": "packages/lexical/src/LexicalNormalization.ts", "type": "file" }
           ],
           "opacity": 0.8,
-          "renderStrategy": "border"
+          "renderStrategy": "fill"
         }
       ],
       "colorMode": "fileTypes"
@@ -304,7 +304,7 @@ Tour explaining core architectural patterns and how they're implemented:
             { "path": "packages/lexical/src/LexicalEditor.ts", "type": "file" }
           ],
           "opacity": 0.8,
-          "renderStrategy": "border"
+          "renderStrategy": "fill"
         }
       ],
       "colorMode": "fileTypes",
@@ -333,7 +333,7 @@ Tour explaining core architectural patterns and how they're implemented:
             { "path": "packages/lexical-react/src/LexicalRichTextPlugin.tsx", "type": "file" }
           ],
           "opacity": 0.8,
-          "renderStrategy": "border"
+          "renderStrategy": "fill"
         }
       ],
       "colorMode": "fileTypes"
@@ -376,7 +376,7 @@ Tour explaining recent architectural changes, not just listing files:
             { "path": "src/core/Updates.ts", "type": "file" }
           ],
           "opacity": 0.8,
-          "renderStrategy": "border"
+          "renderStrategy": "fill"
         }
       ]
     },
@@ -397,7 +397,7 @@ Tour explaining recent architectural changes, not just listing files:
             { "path": "src/plugins/ListPlugin.ts", "type": "file" }
           ],
           "opacity": 0.8,
-          "renderStrategy": "border"
+          "renderStrategy": "fill"
         }
       ],
       "resources": [

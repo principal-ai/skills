@@ -163,13 +163,25 @@ When creating tours, prioritize explaining:
   "name": "Core Components",
   "color": "#3b82f6",                // hex color
   "items": [
-    { "path": "src/index.ts", "type": "file" },
-    { "path": "src/components", "type": "directory" }
+    { "path": "src/index.ts", "type": "file" }
   ],
   "opacity": 0.7,
-  "renderStrategy": "border"
+  "renderStrategy": "fill"           // see render-strategy rule below
 }]
 ```
+
+**Render strategy — prefer `fill` for files.** A `border` is a thin
+outline drawn around a building. Files are small buildings, so a border on a
+file is easy to miss — especially when the step also sets a `focusDirectory`,
+because the whole focused district keeps its file-type fill colors and the thin
+outline blends in. Use:
+- **`fill`** for **file** highlights (and any time you need a few specific
+  buildings to pop) — it recolors the whole building with the layer color.
+- **`border`** for **directory / region** highlights, where outlining a large
+  area reads clearly and a fill would swamp it.
+
+Mixing types in one layer? Split files (`fill`) and directories (`border`)
+into separate layers so each gets the right strategy.
 
 **Interactive Actions**
 ```json
@@ -276,6 +288,7 @@ Common errors and fixes are in `references/troubleshooting.md`.
     - Use `"src"` to focus on a specific top-level directory
     - Use `"src/components"` to zoom into nested areas
 13. **Last step must focus on root** - Set `"focusDirectory": ""` on the final step for complete overview
+14. **`fill` for files, `border` for directories** - A border on a small file building is hard to see; `fill` recolors the building so it pops. Reserve `border` for directory/region highlights (see "Render strategy" above)
 
 ## Path Rules
 
