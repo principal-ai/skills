@@ -21,11 +21,13 @@ npx @principal-ai/principal-view-cli@latest tour init --template onboarding
 # Validate a tour file
 npx @principal-ai/principal-view-cli@latest tour validate my-tour.tour.json
 
-# Preview it locally in the File City viewer (run from a checkout of the repo,
-# or pass --repo-root <path>)
+# ★ Preview it locally in the File City viewer — THIS IS THE PAYOFF.
+# Authoring a tour exists to be viewed; once it validates, open it for the user.
+# (Run from a checkout of the repo, or pass --repo-root <path>.)
 npx @principal-ai/principal-view-cli@latest tour view my-tour.tour.json
 
-# Publish it to the store; prints a share URL with the minted tour id
+# Publish it to the store; prints a share URL with the minted tour id.
+# Outward-facing — only when the user asks to share, not the default endpoint.
 npx @principal-ai/principal-view-cli@latest tour publish my-tour.tour.json
 
 # Fetch / open a published tour by id or URL
@@ -57,11 +59,13 @@ replace `OWNER`/`REPO` with the real repository before validating or publishing.
 
 ## Tour Structure
 
-Tours are JSON files ending with `.tour.json`. They are **authored locally**,
-**previewed** in the viewer (`tour view`), and **published to the store**
-(`tour publish`) — they are no longer committed to the repo root or
-auto-discovered by a file scan. A repo can have many tours; each gets its own id
-when published, and is retrieved by id (`tour fetch` / `tour view <id>`).
+Tours are JSON files ending with `.tour.json`. They are **authored locally** and
+**previewed** in the viewer (`tour view`) — previewing is the normal endpoint.
+**Publishing to the store** (`tour publish`) is optional and outward-facing, for
+when the user wants to share a tour beyond their machine. Tours are no longer
+committed to the repo root or auto-discovered by a file scan. A repo can have
+many tours; each gets its own id when published, and is retrieved by id
+(`tour fetch` / `tour view <id>`).
 
 ### Minimal Structure
 
@@ -280,7 +284,7 @@ Common errors and fixes are in `references/troubleshooting.md`.
    - **200-250 characters per description** - Max 300 characters
    - **Total text: 800-1,500 chars** for 2 minutes, up to 2,000 chars for 3 minutes
 8. **Use relative paths** - No leading `/` or `./`
-9. **Test thoroughly** - Walk through the tour in File City and verify timing
+9. **Show the user their tour** - Once it validates, open it in the viewer with `tour view` by default — this is the deliverable, not an optional QA step. Walking through it in File City also lets you verify timing and flow, but the point is that the user gets to see the tour they asked for
 10. **Hex colors only** - Format: `#RRGGBB` or `#RGB`
 11. **Kebab-case IDs** - Lowercase, hyphens only
 12. **Always set focusDirectory with highlightLayers** - Ensures camera focuses on highlighted area:
@@ -310,12 +314,25 @@ Common errors and fixes are in `references/troubleshooting.md`.
 
 ## Workflow
 
+The goal of authoring a tour is for the user to **see it**. Previewing locally is
+the culmination of the task, not an optional QA step — finish there by default.
+
 1. **Create** - `tour init`, or copy from `assets/` templates (then set `repos`)
 2. **Customize** - Edit tour steps for your codebase
 3. **Validate** - `tour validate`
-4. **Preview** - `tour view <file>` from a checkout of the repo (or `--repo-root <path>`)
-5. **Publish** - `tour publish <file>` → share the printed URL / id
-6. **Iterate** - Refine based on feedback; re-publish
+4. **Preview — this is the deliverable** - `tour view <file>` from a checkout of
+   the repo (or `--repo-root <path>`). Once the tour validates, **open the
+   preview for the user without being asked** — they requested a tour, and the
+   running tour in the viewer is the thing they wanted. Don't hand back CLI
+   commands for them to run instead.
+
+Optional, only when the user explicitly wants to share the tour beyond their own
+machine:
+
+5. **Publish** - `tour publish <file>` → share the printed URL / id. This is
+   outward-facing (it pushes to the store), so treat it as opt-in: do it only
+   when the user asks to share or publish, never as the default endpoint.
+6. **Iterate** - Refine based on feedback; re-preview (and re-publish if shared)
 
 ## Templates
 
