@@ -8,6 +8,16 @@ license: MIT
 
 Create guided introduction tours that help users navigate and understand codebases using File City visualizations.
 
+> **The deliverable is the running preview — so YOU run it.** When you finish
+> authoring and validating a tour, immediately run `tour view` **yourself** to
+> open it in the File City viewer. Do **not** print the `tour view` command and
+> ask the user to run it, and do **not** stop to ask "want me to open it?" — the
+> user asked for a tour; the open viewer is what they asked for. Yes, `tour view`
+> launches a GUI app; that is expected and wanted. Run it in the background so it
+> doesn't block your session (see [Workflow](#workflow)). Publishing to the store
+> is the only step that's opt-in — everything up to and including the preview is
+> the default, no-confirmation path.
+
 ## Quick Start
 
 ### Using the CLI (Recommended)
@@ -21,9 +31,10 @@ npx @principal-ai/principal-view-cli@latest tour init --template onboarding
 # Validate a tour file
 npx @principal-ai/principal-view-cli@latest tour validate my-tour.tour.json
 
-# ★ Preview it locally in the File City viewer — THIS IS THE PAYOFF.
-# Authoring a tour exists to be viewed; once it validates, open it for the user.
-# (Run from a checkout of the repo, or pass --repo-root <path>.)
+# ★ Preview locally in the File City viewer — THIS IS THE PAYOFF, AND YOU RUN IT.
+# Don't print this for the user to copy — once the tour validates, run it
+# yourself, in the background, as the final step. (Run from a checkout of the
+# repo, or pass --repo-root <path>.) See the Workflow section for the exact call.
 npx @principal-ai/principal-view-cli@latest tour view my-tour.tour.json
 
 # Publish it to the store; prints a share URL with the minted tour id.
@@ -66,6 +77,25 @@ when the user wants to share a tour beyond their machine. Tours are no longer
 committed to the repo root or auto-discovered by a file scan. A repo can have
 many tours; each gets its own id when published, and is retrieved by id
 (`tour fetch` / `tour view <id>`).
+
+### Where to write the tour file
+
+The `.tour.json` is a **transient authoring artifact** — the real output is the
+preview (or, if shared, the published store entry). **Do not write it into the
+target repo's working tree**, where it clutters `git status` and risks being
+committed by accident. Write it to a scratch location outside the repo — the
+system temp dir is a good default:
+
+```bash
+# Author/write to a temp path, then point the viewer at the repo with --repo-root
+npx @principal-ai/principal-view-cli@latest tour view "$TMPDIR/my-tour.tour.json" \
+  --repo-root /path/to/repo
+```
+
+`tour init` writes to the current directory, so run it from a scratch dir (and
+fill `repos` by hand), or move its output out of the repo before previewing. If
+the user wants to keep the tour around, save it somewhere intentional — but never
+default to dropping it in the repo.
 
 ### Minimal Structure
 
@@ -320,11 +350,22 @@ the culmination of the task, not an optional QA step — finish there by default
 1. **Create** - `tour init`, or copy from `assets/` templates (then set `repos`)
 2. **Customize** - Edit tour steps for your codebase
 3. **Validate** - `tour validate`
-4. **Preview — this is the deliverable** - `tour view <file>` from a checkout of
-   the repo (or `--repo-root <path>`). Once the tour validates, **open the
-   preview for the user without being asked** — they requested a tour, and the
-   running tour in the viewer is the thing they wanted. Don't hand back CLI
-   commands for them to run instead.
+4. **Preview — this is the deliverable, and you run it** - Once the tour
+   validates, **you** run `tour view <file>` (from a checkout of the repo, or
+   with `--repo-root <path>`). Do this **without asking and without handing the
+   command to the user** — they requested a tour, and the running viewer is the
+   thing they wanted.
+   - **It's a GUI app, and that's fine.** `tour view` opens a windowed viewer.
+     Launching it is the expected, wanted outcome — do not let "this launches an
+     app" caution talk you into asking first.
+   - **Run it in the background so it doesn't block your session.** The viewer
+     stays open; you should keep control of the conversation. For example:
+     ```bash
+     npx @principal-ai/principal-view-cli@latest tour view "$TMPDIR/my-tour.tour.json" \
+       --repo-root /path/to/repo &
+     ```
+   - After launching, tell the user it's open and offer to adjust steps — don't
+     ask permission to open it, because it's already open.
 
 Optional, only when the user explicitly wants to share the tour beyond their own
 machine:
