@@ -15,11 +15,14 @@ There are many packages here for different features."
 
 ### After (Concept-focused) ✅
 ```
-"Lexical's core: LexicalEditor.ts manages the editor instance,
-LexicalEditorState.ts holds immutable content snapshots.
-Updates use double-buffering - clone state, mutate, reconcile to DOM."
+"Lexical's core: [the editor](packages/lexical/src/LexicalEditor.ts) manages the
+editor instance, [editor state](packages/lexical/src/LexicalEditorState.ts) holds
+immutable content snapshots. Updates use double-buffering - clone state, mutate,
+reconcile to DOM."
 ```
-*Success: Explains architectural concepts and connects them to actual files*
+*Success: Explains architectural concepts and connects them to actual files — and
+every file reference is a root-relative markdown link the viewer can resolve, not
+a raw filename in the prose.*
 
 ### Key Principles
 1. **Explain functionality** - What does this code do?
@@ -27,6 +30,7 @@ Updates use double-buffering - clone state, mutate, reconcile to DOM."
 3. **Connect files to concepts** - Which files implement which patterns?
 4. **Build understanding** - Progress from high-level concepts to implementation details
 5. **Show relationships** - How do components work together?
+6. **Reference files as resolvable links** - Don't write raw file paths, extensions, or code-style identifiers in descriptions; link them with a root-relative target and a plain-language label
 
 All examples below follow this concept-focused approach.
 
@@ -92,7 +96,7 @@ Tour that teaches core concepts and how the system works (recommended approach):
     {
       "id": "editor-and-state",
       "title": "Editor & EditorState Core",
-      "description": "The heart of Lexical: LexicalEditor.ts manages the editor instance, LexicalEditorState.ts holds immutable content snapshots. LexicalUpdates.ts batches mutations, LexicalReconciler.ts syncs to DOM. This architecture enables time-travel, undo/redo, and reliable updates.",
+      "description": "The heart of Lexical: [the editor](packages/lexical/src/LexicalEditor.ts) manages the editor instance, [editor state](packages/lexical/src/LexicalEditorState.ts) holds immutable content snapshots. [Updates](packages/lexical/src/LexicalUpdates.ts) batch mutations, [the reconciler](packages/lexical/src/LexicalReconciler.ts) syncs to DOM. This architecture enables time-travel, undo/redo, and reliable updates.",
       "estimatedTime": 30,
       "focusDirectory": "packages/lexical/src",
       "colorMode": "fileTypes",

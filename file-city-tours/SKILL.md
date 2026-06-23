@@ -165,7 +165,7 @@ When creating tours, prioritize explaining:
 
 **Concrete descriptions beat abstract labels:**
 - ❌ "Core packages with framework functionality"
-- ✅ "LexicalEditor.ts manages the editor instance and wires everything together - updates, listeners, commands, and DOM reconciliation"
+- ✅ "[The editor core](packages/lexical/src/LexicalEditor.ts) manages the editor instance and wires everything together - updates, listeners, commands, and DOM reconciliation"
 
 **Show implementation of concepts:**
 - Connect architectural concepts to actual code files
@@ -178,6 +178,33 @@ When creating tours, prioritize explaining:
 - Highlight key abstractions ("What are the building blocks?")
 - Demonstrate extensibility ("How can I use/extend it?")
 - Point to examples ("Where can I see it in action?")
+
+### Reference files as resolvable links, not raw text
+
+Keep **raw file paths, file extensions, and code-style identifiers out of
+`description` prose as bare text.** A description that drops `LexicalEditor.ts`
+or `src/foo/bar.ts` inline reads as a jargon wall and gives the reader nothing
+to click. Write the reference as a **markdown link whose target is a
+repository-root-relative path** — the viewer resolves the target to the actual
+file, so the reference becomes navigable instead of decorative:
+
+- ❌ `"LexicalEditor.ts manages the editor instance and wires everything together"`
+- ✅ `"[The editor core](packages/lexical/src/LexicalEditor.ts) manages the editor instance and wires everything together"`
+
+The link **target** follows the same [Path Rules](#path-rules) as everywhere
+else: root-relative only — no leading `/`, no `./`, no backslashes — and it must
+resolve to a real file or directory in the repo. The link **label** is
+plain-language prose, not the filename: *"the editor core"*, not
+*"LexicalEditor.ts"*. The label carries the meaning; the resolvable path carries
+the location.
+
+This applies to anything you'd otherwise write in code font — paths, bare
+filenames, extensions, and file-scoped identifiers. The surrounding sentence
+still explains the concept in plain language (see
+[Concepts Over Structure](#tour-philosophy-concepts-over-structure)); only the
+file reference itself becomes a link. When a concept genuinely has no single
+file to point at, describe it in plain language and lean on `highlightLayers` /
+`interactiveActions` to tie it to code rather than naming the file in prose.
 
 ### Key Features
 
@@ -237,7 +264,7 @@ Available: `fileTypes` (default), `git`, `pr`, `commit`, `coverage`, `eslint`, `
 - **Explain architectural concepts** - "This uses an immutable state model for reliable updates"
 - **Show relationships between components** - "Editor manages EditorState, which contains the node tree"
 - **Describe functionality** - "These nodes are immutable - getWritable() creates clones for editing"
-- **Connect files to concepts** - "LexicalEditor.ts manages the editor instance and wires everything together"
+- **Connect files to concepts** - "[The editor core](packages/lexical/src/LexicalEditor.ts) manages the editor instance and wires everything together" (link the file, don't name it raw — see "Reference files as resolvable links")
 - **Build understanding progressively** - Start with core concepts, then show how they're implemented
 
 ### What to Avoid ❌
@@ -254,11 +281,12 @@ Available: `fileTypes` (default), `git`, `pr`, `commit`, `coverage`, `eslint`, `
 The lexical package has the main code, and lexical-react has React bindings."
 ```
 
-**After (Concept-focused):**
+**After (Concept-focused, with file references as resolvable links):**
 ```
-"Lexical's core: LexicalEditor.ts manages the editor instance,
-LexicalEditorState.ts holds immutable content snapshots.
-Updates use double-buffering - clone state, mutate, reconcile to DOM."
+"Lexical's core: [the editor](packages/lexical/src/LexicalEditor.ts) manages the
+editor instance, [editor state](packages/lexical/src/LexicalEditorState.ts) holds
+immutable content snapshots. Updates use double-buffering - clone state, mutate,
+reconcile to DOM."
 ```
 
 ## Common Patterns
@@ -314,6 +342,7 @@ Common errors and fixes are in `references/troubleshooting.md`.
    - **200-250 characters per description** - Max 300 characters
    - **Total text: 800-1,500 chars** for 2 minutes, up to 2,000 chars for 3 minutes
 8. **Use relative paths** - No leading `/` or `./`
+   - **Link file references in descriptions, don't write them raw** - Keep bare file paths, extensions, and code-style identifiers out of `description` prose; write them as markdown links with a root-relative, resolvable target and a plain-language label (see "Reference files as resolvable links")
 9. **Show the user their tour** - Once it validates, open it in the viewer with `tour view` by default — this is the deliverable, not an optional QA step. Walking through it in File City also lets you verify timing and flow, but the point is that the user gets to see the tour they asked for
 10. **Hex colors only** - Format: `#RRGGBB` or `#RGB`
 11. **Kebab-case IDs** - Lowercase, hyphens only
@@ -335,6 +364,11 @@ Common errors and fixes are in `references/troubleshooting.md`.
 - `/src/components` (leading slash)
 - `./src/components` (dot-slash)
 - `src\components` (backslash)
+
+The same rules apply to a path used as a **markdown link target** inside a
+`description` (see "Reference files as resolvable links"): `[the editor
+core](packages/lexical/src/LexicalEditor.ts)` is correct;
+`[…](/packages/…)` or `[…](./packages/…)` will not resolve.
 
 ## References
 
