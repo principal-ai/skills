@@ -148,7 +148,7 @@ A typical marker:
 Marker field guidance:
 
 - `id` — short, stable, unique. Referenced by edges, notes, and view blocks. Lowercase-kebab reads well (`repository-selected-event`, `project-info-tab-open`).
-- `label` — short human title for the snippet drawer header. When omitted, the renderer falls back to the sequence view's `name`.
+- `label` — short human title for the snippet drawer header, in **plain language**. No function/class/file names — *"Decide whether to compress"*, not *"`CompressionDecision.decide` gates on fixed precedence"*. The label says what the step accomplishes; the implementation detail (function names, identifiers) lives in `description`. When omitted, the renderer falls back to the sequence view's `name`.
 - `sourcePath` — **repo-relative** when set. Required if `snippet` is set; optional otherwise.
 - `description` — markdown, 2–6 sentences. Factual, present-tense, identifier-anchored. See the Quality bar's "no editorializing" rule.
 - `snippet.kind` — `'slice'` for trace/flow trails (this skill). Always set it explicitly.
@@ -199,11 +199,12 @@ Informative summaries read as **statements**, not questions or hypotheses. Drop 
 
 - **Paragraph breaks between sentences.** A 3-sentence wall is still a wall in a narrow overlay; three short blocks are scannable. Put each sentence on its own paragraph separated by a blank line (`\n\n` in JSON). Don't use single trailing newlines (`\n`) — markdown collapses them into spaces.
 - **Lede labels are encouraged.** Start each paragraph with a 1–3-word bolded anchor that ends in a period: `**Default.**`, `**On click.**`, `**Clean swap.**`, `**Steady state.**`, `**Trigger.**`, `**Surprise.**`. These act as visual scan anchors. Lede labels are a **separate budget** from the emphasis-bold rule — they don't count against it.
-- **Inline-code every real identifier.** Component names, state variables, props, file paths, function names — wrap in `` ` ` ``. *"the card's `highlightLayers` memo"* beats *"the card's highlightLayers memo"*.
+- **Keep the overview conceptual; push internal names down to descriptions.** The summary describes *what happens*, not *which internal function does it*. Keep internal function/class names and file paths out of the summary — *"Headroom starts the proxy and points the agent's API base URL at it"*, not *"`_start_proxy` forks the proxy and `_write_claude_wrap_base_url` writes `ANTHROPIC_BASE_URL` into `.claude/settings.local.json`"*. Those internal identifiers belong in marker `description`s. **User-facing** identifiers are fair game in the summary: the command the user types (`headroom wrap claude`), a public endpoint (`/v1/messages`), an env var the user sets (`ANTHROPIC_BASE_URL`).
+- **Inline-code any identifier you do surface.** When a (user-facing) identifier appears in the summary, wrap it in `` ` ` `` — *"point `ANTHROPIC_BASE_URL` at the proxy"* beats *"point ANTHROPIC_BASE_URL at the proxy"*.
 - **Emphasis bold sparingly — at most one term per summary**, reserved for the load-bearing concept the reader should walk away with. Lede labels don't count toward this budget.
 - **No headers, no lists, no links, no code blocks.** A summary that wants any of these has broken the 3-sentence cap.
 - **Active voice, present tense.** *"The card paints the layer"*, not *"the layer is painted"* and not *"we made the card paint"*. Describes how the code works **now**, not how it was built or investigated.
-- **Name real identifiers, not paraphrases.** Write `selectedTrailId`, not *"the current selection"*. Generic nouns (*"the state"*, *"the handler"*) signal prose too abstract to be useful.
+- **In descriptions, name real identifiers, not paraphrases.** Marker `description`s write `selectedTrailId`, not *"the current selection"*; generic nouns (*"the state"*, *"the handler"*) signal prose too abstract to be useful. The summary is the exception — it stays conceptual (see the overview rule above) and names only user-facing identifiers.
 - **No first person, no hedging.** Drop *"we"*, *"I"*, *"basically"*, *"essentially"*, *"seems to"*.
 - **Semicolons and em-dashes are fine** for compressing two related clauses into one sentence.
 
@@ -288,7 +289,8 @@ This is the heart of the skill. The mechanics above are the same as any trail PO
 - **Leads with the answer.** The reader should not have to walk the whole chain to learn the headline. Either the first marker *is* the answer (then the rest is supporting structure), or the markers are ordered so a reader who stops after marker 1–2 has the gist.
 - **Is tight.** 5–8 markers is the common range. 12 is already long. Every marker earns its place by carrying a decision, branch, handler, side-effect, or invariant — not "this region is involved." If you find yourself writing *"and this file also matters"*, that's not a marker.
 - **States facts, never editorializes.** Descriptions are factual statements about what the code does. Banned phrasings (non-exhaustive): *"The whole feature."*, *"This is where the magic happens."*, *"Everything hinges on this."*, *"Critically important step."*, *"TL;DR: …"*, *"The key insight is …"*, *"Note that …"*, *"Importantly, …"*, *"Crucially, …"*. If a marker is load-bearing, **demonstrate** it through specific detail (the branch taken, the value checked, the event emitted) — never **tell** the reader it matters. Show the cookie, don't announce that there is a cookie worth showing.
-- **Names real identifiers.** Write `selectedTrailId`, `repository-selected`, `useProjectInfoTab` — not *"the state"*, *"the event"*, *"the hook"*. A reader can grep for a real identifier; they can't grep for *"the helper"*. Inline-code every identifier in both summary and descriptions.
+- **Names real identifiers in descriptions.** Marker `description`s write `selectedTrailId`, `repository-selected`, `useProjectInfoTab` — not *"the state"*, *"the event"*, *"the hook"*. A reader can grep for a real identifier; they can't grep for *"the helper"*. Inline-code every identifier you use. The **title, step labels, and summary** are the exception: they stay in plain language and name only user-facing identifiers (commands, public endpoints, env vars the user sets) — internal function/class names belong in the descriptions, not the headline surfaces.
+- **Has plain-language step labels and a short title.** A marker `label` says what the step accomplishes (*"Forward the request to the LLM API"*), never how (*"`_stream_response` sends `outbound_bytes` over `httpx`"*). The title is a short statement of the headline, not a step-by-step chain of the whole flow.
 - **Has no investigation residue.** Strip *"I was checking…"*, *"It turns out…"*, *"After some digging…"*, *"My first guess was…"*, *"This took a while to find…"*. The informative trail does not narrate the discovery.
 - **Has no dead ends.** Investigations are allowed to wander; informative trails are not. Every marker is on the path from entry to answer. If a marker is a "we considered this but it's not the cause" stop, delete it.
 - **Has stable lanes.** 3 lanes reused across 8 markers reads clean; 8 different lanes reads as confetti. Pick lanes by participant or subsystem (`ui.titlebar.*`, `state.repository.*`, `ui.project-info.*`) and reuse them.
@@ -301,12 +303,13 @@ This is the heart of the skill. The mechanics above are the same as any trail PO
 Run through this list. If any answer is "no" or "not sure," fix it before posting:
 
 - [ ] `title` reads as a statement of what's true (not a question, not "Looking into…"), is ≤~140 characters, and you offered the user title options (unless they supplied one).
-- [ ] `summary` is ≤3 sentences, paragraph-broken, and states the answer (not the journey).
+- [ ] `summary` is ≤3 sentences, paragraph-broken, states the answer (not the journey), and stays conceptual — no internal function/class names or file paths (those live in descriptions).
+- [ ] Marker `label`s are plain-language (what the step accomplishes), with no function/class/file names.
 - [ ] `purpose: 'informative'` is set explicitly.
 - [ ] Every marker is on the path from entry to answer; no dead ends.
 - [ ] No marker carries `kind: 'subject'`.
 - [ ] Marker descriptions are factual — none of the banned editorial phrasings.
-- [ ] Identifiers in summary and descriptions are inline-coded and real (not paraphrases).
+- [ ] Identifiers in descriptions are inline-coded and real (not paraphrases); the summary names only user-facing identifiers, inline-coded.
 - [ ] Lanes are stable and named by participant/subsystem; no `step1`/`handler`/`do-thing` placeholders.
 - [ ] `sourcePath` values are repo-relative; `repositoryPath` (top-level, beside the payload) is the absolute path on this machine.
 - [ ] `authoredAt: { sha, ref }` is set for single-repo trails; or `repos[]` + per-marker `repo` for multi-repo.
