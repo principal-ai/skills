@@ -74,6 +74,7 @@ request/response shapes in full.
 | `GET` | `/api/topics/:id` | Read the topic + its trails. Returns `{ success, topic, trails }`. |
 | `POST` | `/api/topics/:id/description/append` | Append a paragraph to the description. Body `{ text }`. |
 | `POST` | `/api/topics/:id/description/section` | Replace one `##`/`###` section in place (or append if absent). Body `{ heading, body, level? }`. |
+| `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the focused/main window (opens/focuses the window as needed). No body. Returns `{ success, delivered, windowOpened }`. |
 
 Editing a topic's **title or trail list** over the bridge isn't supported — do
 that from the app UI. Publishing to web-ade is owner-authenticated and likewise

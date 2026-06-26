@@ -1,6 +1,6 @@
 ---
 name: topic-context
-description: Read the topic an agent was briefed on and keep its description current as work progresses — list/search local topics, fetch a topic + its trails from the local Principal MCP Bridge, append discovered context, or replace one ## / ### section of the description in place (e.g. update a status block). Use when you were handed a "Fetch http://localhost:3044/api/topics/<id> to begin working on topic …" brief, or when the user says "update the topic", "mark this section done on the topic", "leave context on the topic", "fix the status on the topic", "what's this topic about", "what topics are there", "find the topic about X". Topics can be listed/filtered via GET /api/topics?q=…; the description is editable over the bridge via append (grow) and section upsert (replace-in-place). NOT for creating a topic — use create-topic (local-bridge create). NOT for browsing topics a user published — use discover-trails. NOT for editing a topic's title or trail list — this skill is description-only.
+description: Read the topic an agent was briefed on and keep its description current as work progresses — list/search local topics, fetch a topic + its trails from the local Principal MCP Bridge, append discovered context, or replace one ## / ### section of the description in place (e.g. update a status block). Use when you were handed a "Fetch http://localhost:3044/api/topics/<id> to begin working on topic …" brief, or when the user says "update the topic", "mark this section done on the topic", "leave context on the topic", "fix the status on the topic", "what's this topic about", "what topics are there", "find the topic about X", or "open the topic" / "open it in the app" (activate it as a tab in the running app). Topics can be listed/filtered via GET /api/topics?q=…; the description is editable over the bridge via append (grow) and section upsert (replace-in-place); a topic can be opened in the app via POST /api/topics/:id/activate. NOT for creating a topic — use create-topic (local-bridge create). NOT for browsing topics a user published — use discover-trails. NOT for editing a topic's title or trail list — this skill is description-only.
 ---
 
 # Topic Context
@@ -32,6 +32,9 @@ Fire on phrases / situations like:
 - "leave context on the topic for the next person"
 - "what's this topic about?" / "summarize the topic I'm working on"
 - "record what we found on the topic"
+- "open the topic" / "open it in the app" / "open it in the editor" — activate
+  it as a tab in the running app with `POST /api/topics/:id/activate` (see
+  "Endpoints").
 
 Don't fire when the user wants to:
 
@@ -70,9 +73,12 @@ also why it's append/section only — see "Why no full replace?" below.)
 | `GET` | `/api/topics/:id` | Read the topic + its trails. Returns `{ success, topic, trails }`. |
 | `POST` | `/api/topics/:id/description/append` | Append a paragraph to the description. Body: `{ text }`. |
 | `POST` | `/api/topics/:id/description/section` | Replace one `##`/`###` section in place, or append it if absent. Body: `{ heading, body, level? }`. |
+| `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the focused/main window (opens/focuses a window as needed). No body. Returns `{ success, delivered, windowOpened }`. |
 
-All three return the updated `{ success, topic, trails }` (the section route
-also returns `action: "replaced" | "inserted"`).
+The read + write-description routes return the updated `{ success, topic, trails }`
+(the section route also returns `action: "replaced" | "inserted"`). The
+`activate` route doesn't edit anything — it just opens the topic in the app and
+returns `{ success, delivered, windowOpened }`.
 
 ### The topic shape you get back
 
@@ -245,8 +251,9 @@ Don't try to force it; the 409 is the guard doing its job.
 
 - It doesn't **create** topics (`create-topic`) or **browse**
   published ones (`discover-trails`).
-- It doesn't edit the **title** or the **trail list** — this skill is
-  description-only.
+- It doesn't edit the **title** or the **trail list** — its *write* surface is
+  description-only (it can also **open** a topic in the app via `activate`, which
+  changes nothing).
 - It doesn't **fully replace** an arbitrary description blob — by design. You
   grow it (append) or edit it a section at a time (upsert). See below.
 
