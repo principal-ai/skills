@@ -35,6 +35,9 @@ Fire on phrases / situations like:
 - "open the topic" / "open it in the app" / "open it in the editor" — activate
   it as a tab in the running app with `POST /api/topics/:id/activate` (see
   "Endpoints").
+- "validate the topic's links" / "check the references on the topic" / "are the
+  file links on the topic valid?" — `POST /api/topics/:id/validate-links` (see
+  "Validate after editing").
 
 Don't fire when the user wants to:
 
@@ -74,6 +77,7 @@ also why it's append/section only — see "Why no full replace?" below.)
 | `POST` | `/api/topics/:id/description/append` | Append a paragraph to the description. Body: `{ text }`. |
 | `POST` | `/api/topics/:id/description/section` | Replace one `##`/`###` section in place, or append it if absent. Body: `{ heading, body, level? }`. |
 | `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the focused/main window (opens/focuses a window as needed). No body. Returns `{ success, delivered, windowOpened }`. |
+| `POST` | `/api/topics/:id/validate-links` | Validate the file/doc references in the description. No body. Returns `{ success, summary, findings }`. Read-only. |
 
 The read + write-description routes return the updated `{ success, topic, trails }`
 (the section route also returns `action: "replaced" | "inserted"`). The
@@ -174,7 +178,7 @@ content.
 ```bash
 curl -s -X POST http://localhost:3044/api/topics/$TOPIC_ID/description/append \
   -H 'content-type: application/json' \
-  -d '{"text":"The auth flow lives in `src/main/auth/`; the token refresh is in `AuthService.refresh`."}'
+  -d '{"text":"The token refresh lives in [AuthService.refresh](pkg:github/owner/repo#src/main/auth/AuthService.ts)."}'
 ```
 
 A blank-line separator is inserted between the old body and your text.
@@ -216,6 +220,34 @@ Behavior:
 `"## Status"` target the same section. The section you replace owns its nested
 deeper headings (replacing `## Notes` replaces everything down to the next
 `##`), so scope your `body` to match.
+
+### Referencing files & docs
+
+When your text points at a file, write a **purl-qualified link**, not a bare
+path or a `github.com` URL — a topic spans repos, so a bare path is ambiguous
+and won't resolve when someone clicks it:
+
+```
+[AuthService.refresh](pkg:github/owner/repo#src/main/auth/AuthService.ts)
+```
+
+Repo = the purl (`pkg:<type>/<owner>/<repo>`); file = the `#subpath`; pin with
+`@<sha>` when the reference must stay valid as the repo moves. Only reference
+repos the topic claims. A symbol or path mentioned in passing can stay inline
+code. (Full conventions live in the `create-topic` skill.)
+
+### Validate after editing
+
+After any append/section write that touched file references, validate them:
+
+```bash
+curl -s -X POST http://localhost:3044/api/topics/$TOPIC_ID/validate-links | jq
+```
+
+Fix every `error` (a repo link that isn't purl-qualified, a malformed purl) and
+every `finding` (`missing` file, `out-of-scope` repo) — apply the fix with a
+section upsert, then re-validate — and weigh the `suggestion`s (path-like inline
+code that should be a purl link). Read-only; it never edits the topic for you.
 
 ### Resolving a 409 (duplicate headings)
 
@@ -283,5 +315,6 @@ Full-document edits stay a human action in the UI. Work within that grain.
 - HTTP routes: `electron-app/src/main/topics/topicRoutes.ts`
 - Registry + sync (write-through to web-ade when published): `electron-app/src/main/stores/TopicRegistryService.ts`
 - Section engine: `upsertSection` / `splitSections` in `@principal-ade/markdown-utils` (≥ 0.3.1)
+- Reference validation: `electron-app/src/main/topics/validateTopicLinks.ts` (`POST /api/topics/:id/validate-links`)
 - The brief that points agents here: `electron-app/src/renderer/components/Titlebar/BriefAgentButton.tsx`
 - Sister skills: `create-topic` (local-bridge create), `discover-trails` (web read), `document-notes` (local-bridge notes)

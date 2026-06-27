@@ -75,6 +75,7 @@ request/response shapes in full.
 | `POST` | `/api/topics/:id/description/append` | Append a paragraph to the description. Body `{ text }`. |
 | `POST` | `/api/topics/:id/description/section` | Replace one `##`/`###` section in place (or append if absent). Body `{ heading, body, level? }`. |
 | `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the focused/main window (opens/focuses the window as needed). No body. Returns `{ success, delivered, windowOpened }`. |
+| `POST` | `/api/topics/:id/validate-links` | Validate the file/doc references in the description: which links must be purl-qualified, scope against the topic's repos, and whether each purl file-ref exists (local clone first, remote default branch as fallback). No body. Returns `{ success, summary, findings }`. Read-only. |
 
 Editing a topic's **title or trail list** over the bridge isn't supported — do
 that from the app UI. Publishing to web-ade is owner-authenticated and likewise

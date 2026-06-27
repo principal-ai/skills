@@ -139,7 +139,21 @@ library — surface it rather than assuming the topic is fully wired.
    reach it afterward via `topic-context` (`GET /api/topics/<id>`, append,
    section upsert). Report it to the user.
 
-6. **Hand off / next steps.** To keep the description current as work proceeds,
+6. **Validate the references** in the description you just wrote:
+
+   ```bash
+   curl -s -X POST http://localhost:3044/api/topics/<id>/validate-links | jq
+   ```
+
+   It returns a `summary` and a `findings[]` severity ladder. Act on it before
+   handing off: fix every **error** (a repo link that isn't purl-qualified, or a
+   malformed purl) and every **finding** (a file that doesn't exist — `missing`;
+   a repo the topic doesn't claim — `out-of-scope`); fold in **suggestions**
+   (path-like inline code that should be a purl link) where they help. Apply
+   fixes with `topic-context`'s section-upsert, then re-validate. See
+   "Referencing files & docs".
+
+7. **Hand off / next steps.** To keep the description current as work proceeds,
    switch to `topic-context`. To publish to web-ade and get a shareable
    `app.principal-ade.com/topic/<id>` link, tell the user to publish from the
    app UI (publishing is owner-authenticated and intentionally not a bridge
@@ -198,6 +212,31 @@ Good (axis stated):
 - **Don't restate the trails** — their titles/summaries already render. The
   description is for the connective narrative and status.
 
+## Referencing files & docs
+
+A topic spans multiple repos and has no single "current repo", so a bare path
+(`src/auth/token.ts`) is ambiguous and a `github.com/...` URL is provider-locked.
+**Reference a file with a purl-qualified link** so it resolves anywhere — for a
+human clicking it in the app, or an agent fetching it:
+
+```markdown
+[token refresh](pkg:github/owner/repo#src/auth/token.ts)
+```
+
+- The repo is the purl (`pkg:<type>/<owner>/<repo>`); the file is the `#subpath`.
+  Line ranges ride *outside* the purl (e.g. trailing `#Lx-Ly`), not inside it.
+- **Pin to a commit** (`@<sha>` or `?commit=<sha>`) when the reference must stay
+  valid as the repo moves — the validator's "not found on main" finding will
+  tell you when this is needed.
+- **Only reference repos the topic claims** (the repos its trails were authored
+  in); a purl into any other repo comes back `out-of-scope`.
+- Mentioning a symbol or a path in passing? Inline code (`` `AuthService.refresh` ``)
+  is fine — the validator only *suggests* converting a path-shaped span. But if
+  you mean "go open this file", make it a purl link.
+
+The `validate-links` route (flow step 6) enforces this; write purl links from
+the start so the report comes back clean.
+
 ## What this skill doesn't do
 
 - It doesn't **author trails** — use the `author-*` skills, then add their ids
@@ -222,7 +261,11 @@ Good (axis stated):
 
 ## Reference
 
-- HTTP route: `electron-app/src/main/topics/topicRoutes.ts` (`POST /api/topics`)
+- HTTP routes: `electron-app/src/main/topics/topicRoutes.ts` (`POST /api/topics`,
+  `POST /api/topics/:id/validate-links`)
+- Reference validation: `electron-app/src/main/topics/validateTopicLinks.ts`
+  (+ pure layers `src/shared/utils/docReferences.ts`,
+  `classifyTopicReferences.ts`)
 - Registry + sync (and web-ade write-through once published):
   `electron-app/src/main/stores/TopicRegistryService.ts` (`createTopic`)
 - Create input shape: `CreateTopicInput` in
