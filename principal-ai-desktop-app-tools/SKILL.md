@@ -76,6 +76,7 @@ request/response shapes in full.
 | `POST` | `/api/topics/:id/description/section` | Replace one `##`/`###` section in place (or append if absent). Body `{ heading, body, level? }`. |
 | `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the focused/main window (opens/focuses the window as needed). No body. Returns `{ success, delivered, windowOpened }`. |
 | `POST` | `/api/topics/:id/validate-links` | Validate the file/doc references in the description: which links must be purl-qualified, scope against the topic's repos, and whether each purl file-ref exists (local clone first, remote default branch as fallback). No body. Returns `{ success, summary, findings }`. Read-only. |
+| `DELETE` | `/api/topics/:id` | Permanently delete a local topic: removes the on-disk payload + sync metadata and drops it from the in-memory index; open tabs clear via `TOPIC_REMOVED`. The topic's trails are left untouched. Returns `{ success, id }`, or `404 { success: false, error: 'unknown topic id' }`. |
 
 Editing a topic's **title or trail list** over the bridge isn't supported — do
 that from the app UI. Publishing to web-ade is owner-authenticated and likewise
