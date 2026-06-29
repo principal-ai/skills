@@ -196,7 +196,7 @@ Use a single linear chain unless the review legitimately branches (e.g. "fronten
 
 Set `payload.summary` to a markdown overview of the whole review — what the PR does, the headline risks, the suggested reading order. This is the first thing the user sees in the left panel before picking a marker. Aim for 4–10 lines.
 
-**Offer the user title options before POSTing.** Present **2–4 candidate titles** for the walkthrough via `AskUserQuestion` and let the user pick, edit, or supply their own; keep each to **~140 characters or fewer**. Skip the prompt only when the user already handed you an explicit title.
+**Offer the user title options before POSTing.** Present **2–4 candidate titles** for the walkthrough via `AskUserQuestion` and let the user pick, edit, or supply their own; keep each to **~50 characters or fewer**. Skip the prompt only when the user already handed you an explicit title.
 
 ### 6. POST it
 

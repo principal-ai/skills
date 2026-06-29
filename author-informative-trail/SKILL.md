@@ -91,7 +91,7 @@ If you can't articulate the headline in one sentence, you don't have an informat
 **Offer the user title options before POSTing.** The title is the most visible and most-revised part of a trail, and the right framing often depends on audience context only the user has (e.g. "what are we paying for", "how the mobile app does X"). Once you have the headline, present **2–4 candidate titles** via `AskUserQuestion` and let the user pick, edit, or supply their own. Each candidate should:
 
 - read as a statement of what's true (see the `title` field guidance below), and
-- stay **around 140 characters or fewer** — if a title needs more than that, it's usually carrying detail that belongs in the summary.
+- stay **around 50 characters or fewer** — if a title needs more than that, it's usually carrying detail that belongs in the summary.
 
 Skip the prompt only when the user already handed you an explicit title to use. When they later ask to change it, treat that as a fresh round of options unless they dictate the exact wording.
 
@@ -117,7 +117,7 @@ interface TrailPayload {
 Field guidance — informative-specific:
 
 - `id` — fresh, unique. Generate with `crypto.randomUUID()` or a stable kebab id like `<headline-slug>-informative`.
-- `title` — **a statement of what's true**, not an exploration. Good: *"Titlebar selection opens project-info tab via repository-selected event."* Bad: *"Looking into titlebar selection behavior"* or *"Titlebar selection"*. The title is the headline. Keep it to **~140 characters or fewer**, and offer the user a few options to choose from rather than committing one yourself (see step 2).
+- `title` — **a statement of what's true**, not an exploration. Good: *"Titlebar selection opens the project-info tab."* Bad: *"Looking into titlebar selection behavior"* or *"Titlebar selection"*. The title is the headline. Keep it to **~50 characters or fewer**, and offer the user a few options to choose from rather than committing one yourself (see step 2).
 - `summary` — concise statement of the durable insight, not the path to it. **3 sentences max.** Drop "I was investigating…", "we figured out that…", "it turns out…" phrasing. See "Write the summary" below for full formatting rules.
 - `purpose: 'informative'` — set it explicitly. Marks the trail as durable / canonical for any tooling that distinguishes the two flavors.
 - `markers` — tight. 5–8 is typical; 12 is already long. Each marker is one decision, one branch, one handler — not "the area around this region." **Do not emit `kind: 'subject'` on any marker** — that's an investigation-only concept.
@@ -225,7 +225,7 @@ Where `payload.json` is the `TrailPayload` plus a top-level `repositoryPath`:
 ```json
 {
   "id": "titlebar-selection-opens-project-info-informative",
-  "title": "Titlebar selection opens project-info tab via repository-selected event",
+  "title": "Titlebar selection opens the project-info tab",
   "summary": "...",
   "purpose": "informative",
   "authoredAt": { "sha": "abc1234", "ref": "main" },
@@ -302,7 +302,7 @@ This is the heart of the skill. The mechanics above are the same as any trail PO
 
 Run through this list. If any answer is "no" or "not sure," fix it before posting:
 
-- [ ] `title` reads as a statement of what's true (not a question, not "Looking into…"), is ≤~140 characters, and you offered the user title options (unless they supplied one).
+- [ ] `title` reads as a statement of what's true (not a question, not "Looking into…"), is ≤~50 characters, and you offered the user title options (unless they supplied one).
 - [ ] `summary` is ≤3 sentences, paragraph-broken, states the answer (not the journey), and stays conceptual — no internal function/class names or file paths (those live in descriptions).
 - [ ] Marker `label`s are plain-language (what the step accomplishes), with no function/class/file names.
 - [ ] `purpose: 'informative'` is set explicitly.
