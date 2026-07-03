@@ -1,6 +1,6 @@
 ---
 name: search-local-topics-trails
-description: Search the trails and topics already stored on this machine — read the on-disk indexes under ~/.principal, filter by title / summary / repo / recency, and open a matching trail in the viewer with `principal-ai trail view <id>`. Read-only; no authoring, no publishing, no network. Use when the user says "what local trails do I have", "find my trail about X", "do I have a trail for this repo", "search my topics for Y", "open that trail", "pull up the trail for the fundraising repo", or invokes /search-local-topics-trails. Topics have no standalone CLI viewer — point the user to the desktop app to review one. NOT for browsing web-ade (published) trails — use discover-trails. NOT for authoring — use the author-* skills.
+description: Search the trails and topics already stored on this machine — read the on-disk indexes under ~/.principal, filter by title / summary / repo / recency, and open a matching trail in the viewer with `principal-ai trail view <id>` or a matching topic with `principal-ai topic open <id>`. Read-only; no authoring, no publishing, no network. Use when the user says "what local trails do I have", "find my trail about X", "do I have a trail for this repo", "search my topics for Y", "open that trail", "pull up the trail for the fundraising repo", or invokes /search-local-topics-trails. NOT for browsing web-ade (published) trails — use discover-trails. NOT for authoring — use the author-* skills.
 ---
 
 # Search Local Topics & Trails
@@ -157,16 +157,26 @@ principal-ai trail view "$ID"
 
 ## Opening a topic for review
 
-**Not supported from the CLI.** There is no standalone viewer for topics — the
-`principal-ai topic` subcommands only print JSON or open the *published*
-web-ade page in a browser, neither of which reviews a local topic.
+Hand the matched `id` to the CLI:
 
-So when a user asks to open a local topic, you can still **find and describe**
-it from the index (title, description preview, trail count, state, and its
-trail ids), but to actually *review* the topic visually, tell them to use the
-**Principal desktop app** — if it isn't installed, point them to download it.
-You can offer to open the topic's individual trails with `trail view` as a
-fallback, but the topic surface itself is app-only.
+```bash
+principal-ai topic open <id>
+```
+
+(If `principal-ai` isn't on the PATH, the same command is
+`npx -y @principal-ai/principal-view-cli@latest topic open <id>`.)
+
+That opens the topic in the **running desktop app** (via the 3044 bridge's
+`POST /api/topics/:id/activate` route). When no desktop app is available it
+falls back to opening the web-ade page in the default browser. The app must
+be running for the local desktop-app path; the browser fallback works without
+the app.
+
+Example — "open the topic about moving a terminal between windows":
+
+```bash
+principal-ai topic open topic-1782763212946-kw5zfpaej
+```
 
 ## What this skill doesn't do
 
@@ -175,6 +185,6 @@ fallback, but the topic surface itself is app-only.
 - It doesn't **full-text search inside a trail's markers** — the indexes only
   carry `summaryPreview` / `descriptionPreview`. For deeper matching, read the
   payload at `~/.principal/trails/<cachePath>` and grep it.
-- It doesn't **open a topic in a viewer** — topics are app-only (see above).
+- It doesn't **open a topic in a standalone viewer** — topics are surfaced via the desktop app or browser (see above).
 - It doesn't **author, publish, or edit** anything — every step here is a read
   plus, at most, `trail view`.
