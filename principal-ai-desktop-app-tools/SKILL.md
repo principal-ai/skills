@@ -1,143 +1,118 @@
 ---
 name: principal-ai-desktop-app-tools
-description: Canonical reference for the local HTTP surface the running Principal desktop app (electron-app) exposes to agents — the "Principal MCP Bridge" at http://localhost:3044. Covers how to reach it (the /health probe), the route surface grouped by domain (File City trails, topics, document notes), and the cross-cutting conventions every call shares (the top-level repositoryPath bucketing field, the 10MB body limit, where data persists on disk, local-and-unauthenticated). Use when you need to know what the desktop app can do over the bridge, what routes exist, why a POST isn't landing in the app, or what the repositoryPath field is for — and as the source the action skills point at instead of re-explaining the bridge. The bridge is local and unauthenticated; web-ade (published, GitHub-gated) is a separate surface — use discover-trails for that. NOT for authoring/curating itself — use author-investigation-trail, author-informative-trail, create-topic, topic-context, file-city-trail-review, or document-notes, each of which owns its routes below.
+description: Canonical reference for the local HTTP surface the running Principal desktop app (electron-app) exposes to agents through the Principal MCP Bridge at http://localhost:3044. Documents topic, repository, document-note, and document-open routes plus bridge conventions. Use when you need to know what the bridge supports or diagnose a local request. The bridge is local and unauthenticated. NOT for the topic workflows themselves — use create-topic, topic-context, or search-local-topics — or for authoring File City tours.
 ---
 
-# Principal Desktop App Tools (the local bridge)
+# Principal Desktop App Tools
 
-The running Principal desktop app (electron-app) exposes a local HTTP server —
-the **Principal MCP Bridge** — that agents talk to in order to drive the app:
-push a File City trail, create a topic, leave a note on a document, open a file.
-This skill is the **canonical reference** for that surface. The action skills
-(`author-investigation-trail`, `author-informative-trail`, `create-topic`,
-`topic-context`, `file-city-trail-review`, `document-notes`) each own a slice of
-it; this is the one place that describes the bridge as a whole.
+The running electron-app exposes the **Principal MCP Bridge**, a local HTTP
+server for working with local topics, registered repositories, document notes,
+and opening documents in an already-running app window. This skill is the
+reference for its supported HTTP surface; topic and document-note skills own
+their workflows.
 
-It is **read-only as a skill** — it explains the surface and routes you to the
-action skill that performs the operation. It never POSTs anything itself.
+## Connect
 
-## Local bridge vs web-ade
-
-| | **Local bridge (this skill)** | **web-ade (published)** |
-|---|---|---|
-| Where | `http://localhost:3044` on this machine | `https://app.principal-ade.com` |
-| Auth | **None** — local and unauthenticated | GitHub token (`gh auth token` / git credential helper) |
-| Reach it via | `curl` against the running app | the `principal-ai` CLI |
-| What's there | trails/topics/notes on *this* machine, local-only until published | trails/topics a user has published and shared |
-| Read side | this skill | `discover-trails` |
-
-A local trail/topic is promoted to web-ade by **publishing from the app UI** —
-publishing is intentionally *not* a bridge operation.
-
-## Connecting
-
-The electron-app must be running. The bridge listens on:
-
-```
-http://localhost:3044
-```
-
-Confirm it's up **before any call** — don't guess other ports:
+The bridge listens on `http://localhost:3044`. Confirm that it is available
+before calling its routes:
 
 ```bash
-curl -s http://localhost:3044/health   # → {"status":"ok",...,"port":3044}
+curl -s http://localhost:3044/health
 ```
 
-If that fails (`curl: (7) Failed to connect to localhost port 3044`), the app
-isn't running. Ask the user to launch it rather than probing for an alternate
-port. No GitHub token is needed: the bridge is local and unauthenticated.
+If the health request fails, ask the user to launch the app; don't guess another
+port. The bridge is local and unauthenticated. JSON request bodies are limited
+to 10 MB.
 
-## The route surface
+`repositoryPath` is route-specific, not a field required on every request. It
+is used by document-note routes to distinguish the same relative file path in
+different repositories, and by document-open when resolving a relative file
+path.
 
-Every route below is served from `http://localhost:3044`. Routes are grouped by
-domain; the rightmost column is the skill that owns each domain and documents the
-request/response shapes in full.
+## Topics
 
-### File City trails — `author-investigation-trail` · `author-informative-trail` · `file-city-trail-review`
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `POST` | `/api/file-city/trail` | Create or update (when `id` matches an existing entry). Persists, broadcasts `PAYLOAD_SET`, opens/focuses the window with this trail baked into its URL. Strips any `notes` from the body. |
-| `GET` | `/api/file-city/trail/library?repositoryPath=<abs>` | List saved entries for the repo (plus repo-agnostic ones); `repositoryPath` optional — omit to return every entry. Returns `{ entries, activeId }`. |
-| `GET` | `/api/file-city/trail/:id` | Load a saved payload by id. Returns the payload **with `notes` inline** — use this when an agent needs the user's authored context. |
-| `POST` | `/api/file-city/trail/activate` | Body `{ "id": "<id>" }`. Loads the saved entry, broadcasts, opens/focuses the window — same UX as re-POSTing, without re-sending the body. |
-| `DELETE` | `/api/file-city/trail/:id` | Permanently delete the saved entry. Windows showing it clear their tab; other entries are unaffected. |
-| `GET` | `/api/file-city/trail?repositoryPath=<abs>` | Read the currently-active payload for the repo. |
-| `DELETE` | `/api/file-city/trail?repositoryPath=<abs>` | Clear the active payload **without** deleting the saved entry. |
-
-### Topics — `create-topic` (create) · `topic-context` (read + keep-current)
+Topics are local subject briefs with a title, Markdown description, optional
+repository PURLs, workflow status, and optional assets. They are not bundles of
+File City trails.
 
 | Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/topics` | List/search local topics (directory, no trails). Supports `?q=` substring filter. Returns `{ success, topics, count }`. |
-| `POST` | `/api/topics` | Create a local topic. Returns `201 { success, topic, trails }`. |
-| `GET` | `/api/topics/:id` | Read the topic + its trails. Returns `{ success, topic, trails }`. |
-| `POST` | `/api/topics/:id/description/append` | Append a paragraph to the description. Body `{ text }`. |
-| `POST` | `/api/topics/:id/description/section` | Replace one `##`/`###` section in place (or append if absent). Body `{ heading, body, level? }`. |
-| `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the focused/main window (opens/focuses the window as needed). No body. Returns `{ success, delivered, windowOpened }`. |
-| `POST` | `/api/topics/:id/validate-links` | Validate the file/doc references in the description: which links must be purl-qualified, scope against the topic's repos, and whether each purl file-ref exists (local clone first, remote default branch as fallback). No body. Returns `{ success, summary, findings }`. Read-only. |
-| `DELETE` | `/api/topics/:id` | Permanently delete a local topic: removes the on-disk payload + sync metadata and drops it from the in-memory index; open tabs clear via `TOPIC_REMOVED`. The topic's trails are left untouched. Returns `{ success, id }`, or `404 { success: false, error: 'unknown topic id' }`. |
+|---|---|---|
+| `GET` | `/api/topics` | List/search local topics. Optional `?q=` filters title and description. Returns `{ success, topics, count }`. |
+| `POST` | `/api/topics` | Create a topic from `title`, optional `description`, optional `repos` PURL array, and optional `visibility` intent. Returns `{ success, topic }`. |
+| `GET` | `/api/topics/:id` | Read a topic. Returns `{ success, topic }`. |
+| `POST` | `/api/topics/:id/description/append` | Append `{ text }` to the description. |
+| `POST` | `/api/topics/:id/description/section` | Replace a `##`/`###` section or append it if absent. Body: `{ heading, body, level? }`; ambiguous duplicate headings return `409`. |
+| `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the focused/main app window. |
+| `POST` | `/api/topics/:id/validate-links` | Validate PURL-qualified file references in the description. Read-only. |
+| `DELETE` | `/api/topics/:id` | Delete a local topic and its sync metadata. |
 
-Editing a topic's **title or trail list** over the bridge isn't supported — do
-that from the app UI. Publishing to web-ade is owner-authenticated and likewise
-UI-only.
+The list route returns lightweight summaries with `id`, `href`, `title`,
+`descriptionPreview`, `state`, `createdAt`, and `updatedAt`. The detail route
+returns only the topic, not related trail payloads.
 
-### Documents — `document-notes`
+## Repositories
 
 | Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/document-notes?repositoryPath=<abs>&relativeFilePath=<rel>` | List notes for a single document. Returns `{ success, repositoryPath, relativeFilePath, notes }`. |
-| `GET` | `/api/document-notes/library?repositoryPath=<abs>` | List every file-with-notes (optionally repo-filtered). Returns `{ success, entries }`. |
-| `POST` | `/api/document-notes` | Create a note. Body `{ repositoryPath?, relativeFilePath, anchor, body, author? }`. |
-| `PATCH` | `/api/document-notes/:noteId` | Update a note's body. Body `{ repositoryPath?, relativeFilePath, body }`. |
-| `DELETE` | `/api/document-notes/:noteId?repositoryPath=<abs>&relativeFilePath=<rel>` | Delete a note. |
-| `POST` | `/api/document/open` | Open a markdown document into the focused window as a tab. Addresses a `{ repositoryPath, filePath }` doc. |
+|---|---|---|
+| `GET` | `/api/repos` | List registered local repositories with paths, remotes, and PURLs. |
+| `POST` | `/api/repos` | Register an absolute local repository path. Re-registering is idempotent. |
+| `DELETE` | `/api/repos?path=<abs>` | Remove a repository from the registry; does not delete its files. |
 
-## Cross-cutting conventions
+`POST /api/repos` requires `{ "path": "/absolute/path/to/repo" }`; a Git
+repository must exist at that path. Its response includes a canonical PURL when
+one can be derived. Use that PURL in a topic's `repos` field.
 
-These hold across every domain above — they're the reason this reference exists
-rather than being repeated per skill.
+## Document notes
 
-- **`repositoryPath` is a top-level field, not part of the payload.** On POSTs it
-  rides on the request body **alongside** the portable payload, never inside it.
-  The host uses it to bucket the broadcast and open the **right** dev-workspace
-  window. It is the **absolute filesystem path on the producer machine**. The
-  portable payload itself never carries filesystem paths (trails carry portable
-  identity — `authoredAt: { sha, ref }` — instead).
-- **Repo-agnostic bucket.** When `repositoryPath` is omitted or unknown, entries
-  land in a repo-agnostic bucket keyed by absolute path. They still work locally
-  but aren't portable across machines.
-- **10MB body limit.** The bridge accepts up to a 10MB request body, but argv has
-  its own limits — write large payloads (e.g. File City review trails with full
-  `oldContents`/`newContents`) to a temp file and `curl --data @file` rather than
-  inlining the JSON.
-- **Persistence on disk.** Trails persist under `~/.principal/trails/<bucket>/<id>.json`,
-  keyed by `id` (re-POSTing the same `id` updates in place). Document notes persist
-  under the app's `userData/document-notes/`. There is no "currently-active" trail
-  tracked on disk — which trail a window shows is per-window state driven by the
-  `?openTrailId=` URL arg and `PAYLOAD_SET` broadcasts.
-- **Local-only until published.** Everything created over the bridge lives on this
-  machine until the user publishes it to web-ade from the app UI.
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/api/document-notes?repositoryPath=<abs>&relativeFilePath=<rel>` | List notes for one document; `relativeFilePath` is required. |
+| `GET` | `/api/document-notes/library?repositoryPath=<abs>` | List documents with notes, optionally filtered by repository. |
+| `POST` | `/api/document-notes` | Create a note. Body includes `relativeFilePath`, non-empty `body`, and `anchor: { exact, prefix?, suffix? }`; `repositoryPath` and `author` are optional. |
+| `PATCH` | `/api/document-notes/:noteId` | Update a note's body. Body includes `relativeFilePath` and `body`; `repositoryPath` is optional. |
+| `DELETE` | `/api/document-notes/:noteId?repositoryPath=<abs>&relativeFilePath=<rel>` | Delete a note; `relativeFilePath` is required. |
+
+Notes persist under the app's `userData/document-notes/`, partitioned by
+repository path and document path.
+
+## Open a document
+
+`POST /api/document/open` sends an open request to the already-focused
+principal or dev-workspace window:
+
+```json
+{
+  "filePath": "src/path/to/file.md",
+  "repositoryPath": "/absolute/path/to/repository"
+}
+```
+
+`filePath` is required. It may be absolute; otherwise, `repositoryPath` is
+required to resolve it. The response includes `windowOpened`. The route does
+not start or focus a new window; when there is no suitable focused window, it
+returns `{ success: true, windowOpened: false }`.
+
+## Persistence
+
+- Topics are stored as one JSON file per topic under `~/.principal/topics/`.
+- Document notes are stored under the app's `userData/document-notes/`.
+- Registered repositories are maintained by the app's Alexandria registry.
 
 ## Troubleshooting
 
 | Symptom | Meaning |
-| --- | --- |
-| `curl: (7) Failed to connect to localhost port 3044` | The app isn't running. Ask the user to launch it; don't guess other ports. |
-| `404` on a `GET .../:id` | The id doesn't resolve — wrong id, deleted, or (for notes) the `noteId` doesn't exist under the `(repositoryPath, relativeFilePath)` you passed. |
-| POST succeeds but nothing appears in the app | Check `repositoryPath` — a wrong/omitted path buckets the broadcast away from the window you're watching. |
-| `MISSING_FILES_NEEDS_CONFIRM` on share | A baked `sourcePath` no longer exists on disk; retry "share anyway" or re-author with contents baked in. (Share is a web-ade op, not a bridge op.) |
-
-## Hand-off — pick the action skill
-
-This skill explains the surface; the action skills perform the work.
-
-| You want to… | Use |
 |---|---|
-| Lay an exploratory trail through a flow | `author-investigation-trail` |
-| Author a durable, canonical trail | `author-informative-trail` |
-| Walk a PR/branch diff visually | `file-city-trail-review` |
-| Create a topic from existing trails | `create-topic` |
-| Read / keep a topic's description current | `topic-context` |
-| Read or write notes on a markdown doc, or open a doc | `document-notes` |
-| Browse trails/topics published to web-ade | `discover-trails` |
+| `curl: (7) Failed to connect to localhost port 3044` | The app/bridge is not running. Ask the user to launch it. |
+| `404 unknown topic id` | The id is not in the local topic registry. |
+| `404 unknown note id` | The note id does not exist for the supplied repository/document pair. |
+| A document-open request returns `windowOpened: false` | No suitable already-focused app window could receive it. |
+
+## Workflow skills
+
+| Need | Skill |
+|---|---|
+| Create a local topic | `create-topic` |
+| Read or update a topic description | `topic-context` |
+| Find or open a local topic | `search-local-topics` |
+| Read or edit document notes | `document-notes` |
+| Author or publish a File City tour | `file-city-tours` |

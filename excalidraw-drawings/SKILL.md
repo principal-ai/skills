@@ -1,6 +1,6 @@
 ---
 name: excalidraw-drawings
-description: Locate and edit the Excalidraw drawings created in the electron-app's Drawings view. Drawings are plain `.excalidraw` JSON files stored under `~/.alexandria/drawings/`, one file per drawing. Use when the user shares a drawing path (e.g. from the Drawings view "Copy file path" button) and asks you to edit, fix, annotate, restructure, or add to a diagram, or says "edit my drawing", "change this excalidraw", "add a box/arrow/label to the diagram", or invokes /excalidraw-drawings. NOT for laying File City trails or sequence diagrams — those are separate trail skills.
+description: Locate and edit the Excalidraw drawings created in the electron-app's Drawings view. Drawings are plain `.excalidraw` JSON files stored under `~/.alexandria/drawings/`, one file per drawing. Use when the user shares a drawing path (e.g. from the Drawings view "Copy file path" button) and asks you to edit, fix, annotate, restructure, or add to a diagram, or says "edit my drawing", "change this excalidraw", "add a box/arrow/label to the diagram", or invokes /excalidraw-drawings. NOT for File City tours (use file-city-tours) or subsystem models (use create-subsystem-model).
 ---
 
 # Excalidraw drawings — find & edit
