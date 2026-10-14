@@ -1,15 +1,15 @@
 ---
 name: principal-ai-desktop-app-tools
-description: Canonical reference for the local HTTP surface the running Principal desktop app (electron-app) exposes to agents through the Principal MCP Bridge at http://localhost:3044. Documents topic, repository, document-note, and document-open routes plus bridge conventions. Use when you need to know what the bridge supports or diagnose a local request. The bridge is local and unauthenticated. NOT for the topic workflows themselves — use create-topic, topic-context, or search-local-topics — or for authoring File City tours.
+description: Canonical reference for the local HTTP surface the running Principal desktop app (electron-app) exposes to agents through the Principal MCP Bridge at http://localhost:3044. Documents topic, repository, document-note, document-open, and managed-process routes plus bridge conventions. Use when you need to know what the bridge supports or diagnose a local request. The bridge is local and unauthenticated. NOT for the topic workflows themselves — use create-topic, topic-context, or search-local-topics — or for authoring File City tours.
 ---
 
 # Principal Desktop App Tools
 
 The running electron-app exposes the **Principal MCP Bridge**, a local HTTP
 server for working with local topics, registered repositories, document notes,
-and opening documents in an already-running app window. This skill is the
-reference for its supported HTTP surface; topic and document-note skills own
-their workflows.
+managed processes, and opening documents in an already-running app window. This
+skill is the reference for its supported HTTP surface; topic and document-note
+skills own their workflows.
 
 ## Connect
 
@@ -92,11 +92,46 @@ required to resolve it. The response includes `windowOpened`. The route does
 not start or focus a new window; when there is no suitable focused window, it
 returns `{ success: true, windowOpened: false }`.
 
+## Processes
+
+The app owns long-lived **managed processes** (dev servers, watchers, tasks).
+An agent can start, stop, restart, read logs, and remove them. The app owns the
+process — closing its panel does not kill it; only an explicit stop (or app
+quit) ends it. `GET /api/processes` also returns **detected** servers: local
+servers found by scanning dev ports that the app did not start. Detected entries
+can be stopped but not restarted.
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/api/processes` | List managed + detected processes. Returns `{ success, processes }`. |
+| `POST` | `/api/processes` | Start a managed process. |
+| `GET` | `/api/processes/:id/logs` | Captured stdout/stderr for one process. Returns `{ success, id, logs }`. |
+| `POST` | `/api/processes/:id/stop` | Stop (kill) a running process; escalates SIGTERM → SIGKILL. |
+| `POST` | `/api/processes/:id/restart` | Restart by re-running the original command (same id). |
+| `DELETE` | `/api/processes/:id` | Remove a finished entry from the list (only when not running). |
+
+`POST /api/processes` body: `{ command, args?, cwd, env?, label?, kind? }`.
+`command` is a **binary** (e.g. `npm`, `bun`) with `args` — not a shell string.
+Agent starts are constrained: `cwd` must be inside a **registered repository**,
+and the command binary must be on the server's allowlist (`npm`, `pnpm`, `yarn`,
+`bun`, `npx`, `node`, `deno`, `vite`, `next`, `astro`, `nuxt`, `storybook`,
+`http-server`, `vitest`, `jest`, `tsc`, `tsx`, `python`, `python3`, `uv`, `go`,
+`cargo`, `make`, `ruby`, `bundle`, `php`, `composer`, `dotnet`, `docker`).
+Returns `201 { success, process }`.
+
+Each `process` entry: `{ id, label, command, cwd, repo?, kind, status, origin,
+pid?, port?, source?, startedAt, endedAt?, exitCode?, lastError?, runCount? }`.
+`id` is a durable app-generated id (never the pid). `origin` is `managed` or
+`detected`. `repo` (`{ name, owner?, purl?, avatarUrl? }`) is the process's cwd
+resolved to a registered repository; `port` is parsed from the process's output
+when it exposes one.
+
 ## Persistence
 
 - Topics are stored as one JSON file per topic under `~/.principal/topics/`.
 - Document notes are stored under the app's `userData/document-notes/`.
 - Registered repositories are maintained by the app's Alexandria registry.
+- Managed processes are owned by the main process and are not stored on disk.
 
 ## Troubleshooting
 
@@ -105,6 +140,8 @@ returns `{ success: true, windowOpened: false }`.
 | `curl: (7) Failed to connect to localhost port 3044` | The app/bridge is not running. Ask the user to launch it. |
 | `404 unknown topic id` | The id is not in the local topic registry. |
 | `404 unknown note id` | The note id does not exist for the supplied repository/document pair. |
+| `400 command "x" is not on the agent allowlist` | The process `command` binary isn't on the allowlist. |
+| `400 body.cwd is not inside a registered repository` | Register the repo first (`POST /api/repos`), then start with a `cwd` inside it. |
 | A document-open request returns `windowOpened: false` | No suitable already-focused app window could receive it. |
 
 ## Workflow skills
