@@ -32,9 +32,10 @@ another port. The bridge is local and unauthenticated.
 ## Create a topic
 
 `POST /api/topics` accepts a non-empty `title`, optional Markdown
-`description`, optional `repos` array of PURLs, and optional local sharing
-intent `visibility` (`private` or `sharable`). It returns
-`{ success: true, topic }`; the registry generates the topic id and timestamps.
+`description`, optional `repos` array of PURLs, optional `subsystemModels` array
+of `{ modelId, trailIds? }` refs, and optional local sharing intent `visibility`
+(`private` or `sharable`). It returns `{ success: true, topic }`; the registry
+generates the topic id and timestamps.
 
 ```bash
 curl -s -X POST http://localhost:3044/api/topics \
@@ -83,6 +84,23 @@ curl -s -X POST http://localhost:3044/api/repos \
 Then pass that PURL in `repos` when creating the topic. A local-only repository
 may resolve to a `pkg:generic/local/...` PURL; that scopes the topic locally but
 is not portable to web-ade.
+
+## Associate subsystem models
+
+A topic may reference the **subsystem models** it concerns — the architecture or
+flows the work touches. Each ref is `{ modelId, trailIds? }`: `modelId` is the
+model's store id (`sg-...`, a file under `~/.principal/subsystem-models/`), and
+`trailIds` optionally narrows the link to specific runtime flows.
+
+```bash
+curl -s -X POST "http://localhost:3044/api/topics/$TOPIC_ID/subsystem-models" \
+  -H 'content-type: application/json' \
+  -d '{"modelId":"sg-1781...","trailIds":["tl-auth-refresh"]}' | jq
+```
+
+Remove one with `DELETE /api/topics/$TOPIC_ID/subsystem-models/$MODEL_ID`; both are
+idempotent. You can also pass `subsystemModels` directly when creating the topic.
+Associations are local-only — they do not travel when a topic is published.
 
 ## Validate description references
 

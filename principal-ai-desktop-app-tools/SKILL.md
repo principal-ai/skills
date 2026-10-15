@@ -32,18 +32,20 @@ path.
 ## Topics
 
 Topics are local subject briefs with a title, Markdown description, optional
-repository PURLs, workflow status, and optional assets. They are not bundles of
-File City trails.
+repository PURLs, workflow status, optional assets, and optional subsystem-model
+associations (local store ids). They are not bundles of File City trails.
 
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | `/api/topics` | List/search local topics. Optional `?q=` filters title and description. Returns `{ success, topics, count }`. |
-| `POST` | `/api/topics` | Create a topic from `title`, optional `description`, optional `repos` PURL array, and optional `visibility` intent. Returns `{ success, topic }`. |
+| `POST` | `/api/topics` | Create a topic from `title`, optional `description`, optional `repos` PURL array, optional `subsystemModels` array of `{ modelId, trailIds? }`, and optional `visibility` intent. Returns `{ success, topic }`. |
 | `GET` | `/api/topics/:id` | Read a topic. Returns `{ success, topic }`. |
 | `POST` | `/api/topics/:id/description/append` | Append `{ text }` to the description. |
 | `POST` | `/api/topics/:id/description/section` | Replace a `##`/`###` section or append it if absent. Body: `{ heading, body, level? }`; ambiguous duplicate headings return `409`. |
 | `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the focused/main app window. |
 | `POST` | `/api/topics/:id/validate-links` | Validate PURL-qualified file references in the description. Read-only. |
+| `POST` | `/api/topics/:id/subsystem-models` | Associate a subsystem model with the topic. Body: `{ modelId, trailIds? }`; upserts by `modelId`. Local-only (never travels on publish). |
+| `DELETE` | `/api/topics/:id/subsystem-models/:modelId` | Remove a subsystem-model association. Idempotent. |
 | `DELETE` | `/api/topics/:id` | Delete a local topic and its sync metadata. |
 
 The list route returns lightweight summaries with `id`, `href`, `title`,

@@ -23,8 +23,9 @@ to web-ade. It is the read-and-update companion to `create-topic`.
 - The user asks to validate the references in a topic description.
 
 Use `create-topic` to create a topic. This skill only updates descriptions; it
-does not change a topic's title, repository scope, structured status, or
-attached assets. It does not browse topics published on web-ade.
+does not change a topic's title, repository scope, structured status, attached
+assets, or subsystem-model associations. It does not browse topics published on
+web-ade.
 
 ## Prerequisites
 
@@ -47,6 +48,8 @@ and unauthenticated; no GitHub token is needed for these routes.
 | `POST` | `/api/topics/:id/description/section` | Replace one `##` or `###` section, or append it if absent. Body: `{ heading, body, level? }`. |
 | `POST` | `/api/topics/:id/activate` | Open the topic as a tab in the app. Returns `{ success, delivered, windowOpened }`. |
 | `POST` | `/api/topics/:id/validate-links` | Validate PURL-qualified file references in the description. Read-only. |
+| `POST` | `/api/topics/:id/subsystem-models` | Associate a subsystem model. Body: `{ modelId, trailIds? }`. |
+| `DELETE` | `/api/topics/:id/subsystem-models/:modelId` | Remove a subsystem-model association. |
 
 The topic read and description-write routes return `{ success, topic }`.
 Section upsert also returns `action: "replaced" | "inserted"`. Link validation
@@ -65,6 +68,7 @@ The local topic shape includes:
   createdBy?: { githubId: number; githubLogin: string };
   status?: { state: string; label?: string; waitingOn?: object };
   assets?: Array<{ id: string; mime: string; data?: string; url?: string }>;
+  subsystemModels?: Array<{ modelId: string; trailIds?: string[] }>;
 }
 ```
 
@@ -174,7 +178,8 @@ Apply corrections with section upsert, then validate again.
 - Use PURL-qualified links for files and only reference repositories in the
   topic's declared scope.
 - Keep the description focused on connective context; the topic already carries
-  its title, repository scope, status metadata, and assets.
+  its title, repository scope, status metadata, assets, and subsystem-model
+  associations.
 
 ## References
 
