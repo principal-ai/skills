@@ -1,6 +1,6 @@
 ---
 name: principal-ai-desktop-app-tools
-description: Discover the local HTTP API exposed by the running Principal desktop app through the Principal MCP Bridge (production port 3044, development port 3054). Explains bridge categories, GET /routes discovery, and POST /routes batch documentation lookup. Use when you need to know what the bridge supports, find a request contract, open a localhost preview, or diagnose a local request. The bridge is local and unauthenticated. Workflow skills own topic, document-note, and File City tour workflows.
+description: Discover the local HTTP API exposed by the running Principal desktop app through the Principal MCP Bridge (production port 3044, development port 3054). Explains bridge categories, GET /routes discovery, and POST /routes batch documentation lookup. Use when you need to know what the bridge supports, find a request contract, clone or register a local repository checkout, open a localhost preview, or diagnose a local request. The bridge is local and unauthenticated. Workflow skills own topic, document-note, and File City tour workflows.
 ---
 
 # Principal Desktop App Tools
@@ -34,7 +34,7 @@ has `name`, `description`, and endpoint summaries (`method`, `path`, `summary`).
 |---|---|
 | `diagnostics` | Health, category discovery, and endpoint documentation lookup |
 | `topics` | Create/search/read/edit/open/delete local briefs, validate links, associate local subsystem models |
-| `repos` | Discover/register/de-register local repositories and resolve their PURLs |
+| `repos` | Discover, clone, register, and de-register local repositories; resolve their PURLs |
 | `dependency-graph` | Find direct dependents among analyzed local clones |
 | `dependencies` | Resolve a dependency using repository-monitoring context |
 | `document-notes` | Read/write text-anchored note overlays without editing document source |
@@ -122,6 +122,35 @@ Older builds may lack POST lookup and may return an incomplete GET catalog.
 If lookup returns `404`, do not assume the requested action endpoint is
 missing. Report the build limitation and ask for an updated app rather than
 guessing contracts or silently switching builds.
+
+## Local clones
+
+The `repos` category owns the checkout lifecycle. Fetch the contracts with POST
+`/routes` before acting; the workflow is:
+
+| Need | Route |
+|---|---|
+| See what is cloned locally | `GET /api/repos` |
+| Clone by PURL, `owner/repo`, or clone URL | `POST /api/repos/clone` |
+| Register an existing checkout | `POST /api/repos` |
+| Unregister (and optionally delete) a checkout | `DELETE /api/repos` |
+
+- `GET /api/repos` returns registered clones as
+  `{ path, name, remoteUrl?, purl?, registeredAt }`. Use `purl` — never a
+  filesystem path — when writing a topic's `repos`.
+- `POST /api/repos/clone` accepts repo PURLs (`pkg:github/owner/repo`),
+  `owner/repo` slugs, and clone URLs, and clones into the app's convention:
+  `<baseDefaultDirectory>/<owner>/<repo>`. Pass `depth` for a shallow clone and
+  `register: false` to skip registration. Entries succeed or fail individually —
+  read `results[]` and retry only the entries with `ok: false`.
+- Cloning requires a base directory configured in the app
+  (Settings → General); without one the route returns `400` with that message.
+  Clones are slow: the request holds until they finish, up to five minutes each.
+- `DELETE /api/repos` only unregisters by default. `deleteLocal=true` also
+  deletes the checkout on disk and is refused for relative paths, non-git
+  directories, filesystem roots, and the base directory itself.
+- Local-only repositories cannot be cloned. Register existing checkouts with
+  `POST /api/repos` and an absolute path.
 
 ## Shared conventions and safety
 
