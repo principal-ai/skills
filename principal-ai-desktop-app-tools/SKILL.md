@@ -30,19 +30,19 @@ another port or silently switch builds.
 `GET /routes` returns a lightweight directory grouped by category. Each group
 has `name`, `description`, and endpoint summaries (`method`, `path`, `summary`).
 
-| Category | Capabilities |
-|---|---|
-| `diagnostics` | Health, category discovery, and endpoint documentation lookup |
-| `topics` | Create/search/read/edit/open/delete local briefs, validate links, associate local subsystem models |
-| `repos` | Discover, clone, register, and de-register local repositories; resolve their PURLs |
-| `dependency-graph` | Find direct dependents among analyzed local clones |
-| `dependencies` | Resolve a dependency using repository-monitoring context |
-| `document-notes` | Read/write text-anchored note overlays without editing document source |
-| `documents` | Open a document in an already-focused document-capable window |
-| `processes` | Start/inspect/stop/restart/remove app-owned managed processes |
-| `browser` | Open localhost preview tabs, optionally linked to managed processes |
-| `theme` | Inspect theme schemas and update theme preferences |
-| `bruno` | Validate/parse Bruno request content, files, and collections without executing requests |
+| Category           | Capabilities                                                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `diagnostics`      | Health, category discovery, and endpoint documentation lookup                                                                                |
+| `topics`           | Create/search/read/edit/open/delete local briefs, validate links, and attach repositories, subsystem models, C4 sketches, and related topics |
+| `repos`            | Discover, clone, register, and de-register local repositories; resolve their PURLs                                                           |
+| `dependency-graph` | Find direct dependents among analyzed local clones                                                                                           |
+| `dependencies`     | Resolve a dependency using repository-monitoring context                                                                                     |
+| `document-notes`   | Read/write text-anchored note overlays without editing document source                                                                       |
+| `documents`        | Open a document in an already-focused document-capable window                                                                                |
+| `processes`        | Start/inspect/stop/restart/remove app-owned managed processes                                                                                |
+| `browser`          | Open localhost preview tabs, optionally linked to managed processes                                                                          |
+| `theme`            | Inspect theme schemas and update theme preferences                                                                                           |
+| `bruno`            | Validate/parse Bruno request content, files, and collections without executing requests                                                      |
 
 Use the running build's directory as the source of available categories and
 exact route patterns:
@@ -87,7 +87,7 @@ Response:
   "success": true,
   "results": [
     {
-      "request": {"method":"POST","path":"/api/topics"},
+      "request": { "method": "POST", "path": "/api/topics" },
       "found": true,
       "routes": [
         {
@@ -95,11 +95,11 @@ Response:
           "method": "POST",
           "path": "/api/topics",
           "summary": "...",
-          "body": {"title":"..."},
+          "body": { "title": "..." },
           "response": "...",
-          "errors": {"400":"..."},
+          "errors": { "400": "..." },
           "notes": ["..."],
-          "example": {"title":"..."}
+          "example": { "title": "..." }
         }
       ]
     }
@@ -128,12 +128,12 @@ guessing contracts or silently switching builds.
 The `repos` category owns the checkout lifecycle. Fetch the contracts with POST
 `/routes` before acting; the workflow is:
 
-| Need | Route |
-|---|---|
-| See what is cloned locally | `GET /api/repos` |
-| Clone by PURL, `owner/repo`, or clone URL | `POST /api/repos/clone` |
-| Register an existing checkout | `POST /api/repos` |
-| Unregister (and optionally delete) a checkout | `DELETE /api/repos` |
+| Need                                          | Route                   |
+| --------------------------------------------- | ----------------------- |
+| See what is cloned locally                    | `GET /api/repos`        |
+| Clone by PURL, `owner/repo`, or clone URL     | `POST /api/repos/clone` |
+| Register an existing checkout                 | `POST /api/repos`       |
+| Unregister (and optionally delete) a checkout | `DELETE /api/repos`     |
 
 - `GET /api/repos` returns registered clones as
   `{ path, name, remoteUrl?, purl?, registeredAt }`. Use `purl` — never a
@@ -169,10 +169,10 @@ The `repos` category owns the checkout lifecycle. Fetch the contracts with POST
 
 ## Workflow skills
 
-| Need | Skill |
-|---|---|
-| Create a local topic | `create-topic` |
-| Read/update a topic description | `topic-context` |
-| Find/open a local topic | `search-local-topics` |
-| Read/edit document notes | `document-notes` |
-| Author/publish a File City tour | `file-city-tours` |
+| Need                            | Skill                 |
+| ------------------------------- | --------------------- |
+| Create a local topic            | `create-topic`        |
+| Read/update a topic description | `topic-context`       |
+| Find/open a local topic         | `search-local-topics` |
+| Read/edit document notes        | `document-notes`      |
+| Author/publish a File City tour | `file-city-tours`     |
