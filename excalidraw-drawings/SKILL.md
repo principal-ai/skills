@@ -21,8 +21,10 @@ your changes load cleanly the next time the user opens the drawing.
 
 - One file per drawing. `<id>` is a UUID (or a timestamp for older drawings) —
   it is **not** the display name.
-- The directory is global and repo-free; there is no per-project or per-topic
-  scoping yet.
+- The directory is global and repo-free; there is no per-project scoping.
+- To attach a drawing to a topic, use the file name without `.excalidraw` as a
+  `{ "kind": "drawing", "drawingId": "<id>" }` topic reference (see
+  `create-topic`).
 - The file extension is always `.excalidraw`. The contents are JSON.
 
 The user usually hands you the absolute path via the **"Copy file path"** button

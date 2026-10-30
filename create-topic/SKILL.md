@@ -1,20 +1,21 @@
 ---
 name: create-topic
-description: Create a local topic in the running electron-app, with a title, Markdown brief, and optional references to repositories, subsystem models, C4 sketches, and related topics. Supports the production or development Principal MCP Bridge. Use when the user asks to create or start a topic, make a topic for work, or create a topic with references. NOT for reading/updating an existing topic (use topic-context) or searching/opening local topics (use search-local-topics).
+description: Create a local topic in the running electron-app, with a title, Markdown brief, and optional references to repositories, subsystem models, C4 sketches, Excalidraw drawings, and related topics. Supports the production or development Principal MCP Bridge. Use when the user asks to create or start a topic, make a topic for work, or create a topic with references. NOT for reading/updating an existing topic (use topic-context) or searching/opening local topics (use search-local-topics).
 ---
 
 # Create Topic
 
 Create a local subject brief in the running electron-app through its Principal
 MCP Bridge. A topic has a title, a Markdown description that serves as an agent
-brief, and four optional reference types:
+brief, and five optional reference types:
 
-| Reference        | Field                                           |
-| ---------------- | ----------------------------------------------- |
-| Repositories     | `repos: string[]` (PURLs)                       |
-| Subsystem models | `subsystemModels: [{ modelId, trailIds? }]`     |
-| C4 sketches      | `references: [{ kind: "c4-sketch", sketchId }]` |
-| Related topics   | `references: [{ kind: "topic", topicId }]`      |
+| Reference        | Field                                            |
+| ---------------- | ------------------------------------------------ |
+| Repositories     | `repos: string[]` (PURLs)                        |
+| Subsystem models | `subsystemModels: [{ modelId, trailIds? }]`      |
+| C4 sketches      | `references: [{ kind: "c4-sketch", sketchId }]`  |
+| Drawings         | `references: [{ kind: "drawing", drawingId }]`   |
+| Related topics   | `references: [{ kind: "topic", topicId }]`       |
 
 The description belongs to the topic; it is not a separate document attachment.
 Related topics are other briefs with their own descriptions. A topic is not a
@@ -25,7 +26,7 @@ bundle of trails.
 - The user asks to create or start a topic.
 - The user wants a topic as a brief for work.
 - The user wants a topic scoped to a particular repository.
-- The user wants a topic referencing models, sketches, or other topics.
+- The user wants a topic referencing models, sketches, drawings, or other topics.
 
 Use `topic-context` to read/update an existing topic, and
 `search-local-topics` to find or open local topics.
@@ -48,7 +49,7 @@ another port or silently switching builds. The bridge is local and unauthenticat
 ## Discover the running contract
 
 Use `principal-ai-desktop-app-tools` for bridge discovery. Fetch the contract
-before creating a topic, especially when attaching sketches or related topics:
+before creating a topic, especially when attaching sketches, drawings, or related topics:
 
 ```bash
 curl -fsS "$BASE/routes" \
@@ -58,7 +59,8 @@ curl -fsS "$BASE/routes" \
 
 This is a read-only documentation lookup, not topic creation. Read the returned
 fields and notes. If `body.references` is absent, the build is too old for sketch
-and topic attachments. Ask for an updated/restarted build; do not submit a
+and topic attachments. If it does not mention `"drawing"`, the build is too old
+for drawing attachments. Ask for an updated/restarted build; do not submit a
 payload that could silently lose its references. Do not switch to production
 when testing development.
 
@@ -66,8 +68,8 @@ when testing development.
 
 `POST /api/topics` accepts a non-empty `title`, optional Markdown
 `description`, optional `repos` array of PURLs, optional `subsystemModels` array
-of `{ modelId, trailIds? }` refs, and optional `references` array of C4 sketch
-and topic refs. It returns `{ success: true, topic }`; the registry
+of `{ modelId, trailIds? }` refs, and optional `references` array of C4 sketch,
+drawing, and topic refs. It returns `{ success: true, topic }`; the registry
 generates the topic id and timestamps.
 
 ```bash
@@ -95,7 +97,7 @@ Capture and report the returned `topic.id`; use it to refer to the topic later.
 This HTTP handler does not expose publishing, image assets, status, or visibility
 updates. Publishing is a separate app workflow and is not performed by this skill.
 
-## Create a topic with all four reference types
+## Create a topic with all five reference types
 
 Use actual, existing artifact IDs. The following IDs are placeholders; replace
 them before submitting:
@@ -110,6 +112,7 @@ curl -fsS -X POST "$BASE/api/topics" \
     "subsystemModels": [{"modelId":"sg-123-abc","trailIds":["tl-topic-open"]}],
     "references": [
       {"kind":"c4-sketch","sketchId":"c4s-123-abc"},
+      {"kind":"drawing","drawingId":"0b6f7c1e-2a4d-4e8f-9c3b-1d2e3f4a5b6c"},
       {"kind":"topic","topicId":"topic-123-related"}
     ]
   }'
@@ -120,11 +123,15 @@ curl -fsS -X POST "$BASE/api/topics" \
 - Use subsystem-model and sketch IDs supplied by the user, existing artifacts,
   or the `create-subsystem-model` / `create-c4-sketch` authoring workflows. Do not
   invent IDs or create unrelated artifacts just to fill every section.
+- A `drawingId` is the file name without `.excalidraw` from
+  `~/.alexandria/drawings/<id>.excalidraw` (see `excalidraw-drawings`). It is
+  not the display name, which lives in `appState.name`. Pass the id, never the
+  path; ids containing `/`, `\`, or whitespace are rejected.
 - Repository PURLs go in `repos`; model IDs go in `subsystemModels`. Only
-  sketches and other topics go in `references`.
+  sketches, drawings, and other topics go in `references`.
 - IDs are stable artifact identities, not filesystem paths, S3 URLs, or presigned
   URLs. Reference titles and contents are resolved by the app.
-- `references` is optional; `[]` explicitly means no sketch/topic attachments.
+- `references` is optional; `[]` explicitly means no sketch/drawing/topic attachments.
   IDs are trimmed and duplicate kind/id pairs are stored once, in first-seen
   order. This route validates shape, not target existence. Missing targets appear
   unavailable in the rail, so HTTP success alone does not prove they resolve.
@@ -136,8 +143,9 @@ curl -fsS -X POST "$BASE/api/topics" \
 
 After creation, fetch the `/api/topics/:id` contract, read the topic back, and
 verify all requested fields. The topic tab shows Projects, Models, C4 sketches,
-and Related topics. Sketch references open the embedded C4 viewer; related-topic
-references open the target brief.
+Drawings, and Related topics. Sketch references open the embedded C4 viewer;
+drawing references open the drawing in a Drawings tab; related-topic references
+open the target brief.
 
 ```bash
 curl -fsS "$BASE/api/topics/$TOPIC_ID"
@@ -219,7 +227,7 @@ progresses. Use `search-local-topics` to find or open a local topic.
 | `curl: (7) Failed to connect to localhost port 3044` | The app/bridge is not running. Ask the user to launch the app.                     |
 | `400 title (non-empty string) is required`           | The request is missing a non-empty title.                                          |
 | `400 repos must be an array of PURL strings`         | `repos` is not an array of strings.                                                |
-| `400 references must be an array ...`                | A reference has an unsupported kind or lacks its non-empty `topicId` / `sketchId`. |
+| `400 references must be an array ...`                | A reference has an unsupported kind, lacks its non-empty `topicId` / `sketchId` / `drawingId`, or a `drawingId` is not a single file name. |
 | Topic creation contract lacks `references`           | Update/restart the intended build before attaching sketches or topics.             |
 | `500 failed to create topic`                         | The registry write failed; check the app logs.                                     |
 
