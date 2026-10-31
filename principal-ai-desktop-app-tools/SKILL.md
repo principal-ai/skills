@@ -1,6 +1,6 @@
 ---
 name: principal-ai-desktop-app-tools
-description: Discover the local HTTP API exposed by the running Principal desktop app through the Principal MCP Bridge (production port 3044, development port 3054). Explains bridge categories, GET /routes discovery, and POST /routes batch documentation lookup. Use when you need to know what the bridge supports, find a request contract, clone or register a local repository checkout, open a localhost preview, or diagnose a local request. The bridge is local and unauthenticated. Workflow skills own topic, document-note, and File City tour workflows.
+description: Discover the local HTTP API exposed by the running Principal desktop app through the Principal MCP Bridge (production port 3044, development port 3054). Explains bridge categories, GET /routes discovery, and POST /routes batch documentation lookup. Use when you need to know what the bridge supports, find a request contract, open a GitHub repository in a native Principal tab, clone or register a local repository checkout, open a localhost preview, or diagnose a local request. The bridge is local and unauthenticated. Workflow skills own topic, document-note, and File City tour workflows.
 ---
 
 # Principal Desktop App Tools
@@ -34,7 +34,7 @@ has `name`, `description`, and endpoint summaries (`method`, `path`, `summary`).
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `diagnostics`      | Health, category discovery, and endpoint documentation lookup                                                                                |
 | `topics`           | Create/search/read/edit/open/delete local briefs, validate links, and attach repositories, subsystem models, C4 sketches, and related topics |
-| `repos`            | Discover, clone, register, and de-register local repositories; resolve their PURLs                                                           |
+| `repos`            | Open native GitHub repository tabs; discover, clone, register, and de-register local repositories; resolve their PURLs                       |
 | `dependency-graph` | Find direct dependents among analyzed local clones                                                                                           |
 | `dependencies`     | Resolve a dependency using repository-monitoring context                                                                                     |
 | `document-notes`   | Read/write text-anchored note overlays without editing document source                                                                       |
@@ -122,6 +122,31 @@ Older builds may lack POST lookup and may return an incomplete GET catalog.
 If lookup returns `404`, do not assume the requested action endpoint is
 missing. Report the build limitation and ask for an updated app rather than
 guessing contracts or silently switching builds.
+
+## Open GitHub repositories in Principal
+
+For GitHub repository links, prefer the existing native repository explorer
+instead of a browser preview. Discover and fetch the contract for
+`POST /api/repos/open` before calling it:
+
+```bash
+curl -fsS "$BASE/api/repos/open" \
+  -H 'Content-Type: application/json' \
+  -d '{"repo":"https://github.com/TimBroddin/gitstatus"}'
+```
+
+- Accepts a GitHub repository root URL, `owner/repo`, or
+  `pkg:github/owner/repo`. Optional `.git` suffix and trailing slash are allowed.
+- Reuses Quick Open's repository explorer, opening or focusing a tab by PURL.
+  Works without a local clone. Opening does not clone, register, or fork.
+- Requires an already-focused Principal MAIN window. No new windows are
+  created or focused. If `delivered: false`, ask the user to focus MAIN.
+- `delivered: true` confirms event dispatch only, not renderer acknowledgement
+  or successful GitHub data loading. Report that distinction accurately.
+- Rejects other hosts, local paths, credentials, query strings, fragments,
+  and repository subpaths. This is not an arbitrary URL-opening endpoint.
+- If the running build does not list this endpoint, ask for an updated app.
+  Do not send GitHub URLs to `/api/browser/open`, which remains localhost-only.
 
 ## Local clones
 
