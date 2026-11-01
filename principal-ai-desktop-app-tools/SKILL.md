@@ -1,6 +1,6 @@
 ---
 name: principal-ai-desktop-app-tools
-description: Discover the local HTTP API exposed by the running Principal desktop app through the Principal MCP Bridge (production port 3044, development port 3054). Explains bridge categories, GET /routes discovery, and POST /routes batch documentation lookup. Use when you need to know what the bridge supports, find a request contract, open a GitHub repository in a native Principal tab, clone or register a local repository checkout, open a localhost preview, or diagnose a local request. The bridge is local and unauthenticated. Workflow skills own topic, document-note, and File City tour workflows.
+description: Discover the local HTTP API exposed by the running Principal desktop app through the Principal MCP Bridge (production port 3044, development port 3054). Explains bridge categories, GET /routes discovery, and POST /routes batch documentation lookup. Use when you need to know what the bridge supports, find a request contract, open a GitHub repository in a native Principal tab, clone or register a local repository checkout, watch a GitHub pull request so the user sees its checks/review/merge status, open a localhost preview, or diagnose a local request. The bridge is local and unauthenticated. Workflow skills own topic, document-note, and File City tour workflows.
 ---
 
 # Principal Desktop App Tools
@@ -35,6 +35,7 @@ has `name`, `description`, and endpoint summaries (`method`, `path`, `summary`).
 | `diagnostics`      | Health, category discovery, and endpoint documentation lookup                                                                                |
 | `topics`           | Create/search/read/edit/open/delete local briefs, validate links, and attach repositories, subsystem models, C4 sketches, and related topics |
 | `repos`            | Open native GitHub repository tabs; discover, clone, register, and de-register local repositories; resolve their PURLs                       |
+| `pull-requests`    | Watch GitHub pull requests: the app polls checks, review, and merge state, lists them on Home, and notifies the user on changes             |
 | `dependency-graph` | Find direct dependents among analyzed local clones                                                                                           |
 | `dependencies`     | Resolve a dependency using repository-monitoring context                                                                                     |
 | `document-notes`   | Read/write text-anchored note overlays without editing document source                                                                       |
@@ -147,6 +148,33 @@ curl -fsS "$BASE/api/repos/open" \
   and repository subpaths. This is not an arbitrary URL-opening endpoint.
 - If the running build does not list this endpoint, ask for an updated app.
   Do not send GitHub URLs to `/api/browser/open`, which remains localhost-only.
+
+## Watch a pull request for the user
+
+After opening or pushing to a pull request, add it to the app's watch list so
+the user can follow it without asking you to check. Fetch the contract for
+`POST /api/pull-requests/watch` before calling it:
+
+```bash
+curl -fsS "$BASE/api/pull-requests/watch" \
+  -H 'Content-Type: application/json' \
+  -d '{"pr":"https://github.com/owner/repo/pull/123"}'
+```
+
+- Accepts a GitHub pull request URL, `owner/repo#123`, or
+  `owner/repo/pull/123`. Returns `201` with the first snapshot, or `200` with
+  `alreadyWatched: true` when the PR was already on the list.
+- This is for the user, not for you. The app polls GitHub about once a minute,
+  shows the PR under **Pull Requests** on Home with a link to open it in the
+  browser, and raises a desktop notification when checks finish, a review is
+  decided, or the PR is merged or closed. Do not poll this route or
+  `GET /api/pull-requests/watch` to wait for CI.
+- `404` means the PR could not be loaded (unknown, private without access, or
+  GitHub unreachable) and nothing was added. Report that rather than retrying.
+- `DELETE /api/pull-requests/watch/:owner/:repo/:number` stops watching.
+  Merged and closed PRs drop off on their own after a day.
+- If the running build does not list the `pull-requests` category, ask for an
+  updated app.
 
 ## Local clones
 
